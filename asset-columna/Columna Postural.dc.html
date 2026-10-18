@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/classical-798a0ac5-3399-4066-b4ce-87f9d644dfce/styles.css">
+<script src="_ds/classical-798a0ac5-3399-4066-b4ce-87f9d644dfce/_ds_bundle.js"></script>
+<style>body{margin:0;background:var(--color-bg);}a{color:var(--color-accent-700);}a:hover{color:var(--color-accent-800);}</style>
+</helmet>
+<section data-screen-label="Servicios · Postura" style="max-width:1180px;margin:0 auto;padding:calc(var(--space-8)*2) var(--space-6);font-family:var(--font-body);color:var(--color-text);">
+  <div style="display:flex;flex-direction:column;gap:var(--space-3);max-width:640px;margin-bottom:var(--space-8);">
+    <div style="font-size:13px;letter-spacing:0.14em;text-transform:uppercase;color:var(--color-accent-700);">Servicios · Postural / RPG</div>
+    <h2 style="font-family:var(--font-heading);font-weight:400;font-size:clamp(36px,5vw,56px);line-height:1.05;margin:0;">De la postura habitual a la postura reeducada</h2>
+    <p style="margin:0;font-size:17px;line-height:1.6;color:var(--color-neutral-800);text-wrap:pretty;">Elegí una postura o deslizá cada tramo para ver cómo cambia la columna respecto de la línea de plomada.</p>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:var(--space-8);border-top:1px solid var(--color-divider);padding-top:var(--space-8);">
+    <div style="position:relative;height:640px;border:1px solid var(--color-divider);border-radius:var(--radius-sm);">
+      <div ref="{{ mountRef }}" style="position:absolute;inset:0;"></div>
+      <div style="position:absolute;left:var(--space-4);top:var(--space-4);font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:var(--color-neutral-700);pointer-events:none;">Vista lateral · línea de plomada</div>
+      <div style="position:absolute;right:var(--space-4);top:var(--space-4);font-family:var(--font-heading);font-size:22px;font-style:italic;color:var(--color-accent-700);pointer-events:none;">{{ stageLabel }}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:var(--space-6);">
+      <div style="display:flex;flex-direction:column;gap:var(--space-3);">
+        <div style="font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:var(--color-neutral-700);">Posturas</div>
+        <div style="display:flex;flex-wrap:wrap;gap:var(--space-2);">
+          <sc-for list="{{ presets }}" as="p" hint-placeholder-count="6">
+            <button class="{{ p.cls }}" onClick="{{ p.pick }}">{{ p.name }}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:var(--space-1);padding-top:var(--space-2);min-height:96px;">
+          <span style="font-family:var(--font-heading);font-size:22px;font-style:italic;color:var(--color-accent-700);">{{ descTitle }}</span>
+          <p style="margin:0;font-size:15px;line-height:1.6;color:var(--color-neutral-800);text-wrap:pretty;">{{ desc }}</p>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;">
+        <sc-for list="{{ stats }}" as="s" hint-placeholder-count="3">
+          <div style="display:flex;flex-direction:column;gap:var(--space-3);padding:var(--space-4) 0;border-bottom:1px solid var(--color-divider);">
+            <div style="display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:var(--space-3);">
+              <div style="display:flex;flex-direction:column;gap:2px;">
+                <span style="font-family:var(--font-heading);font-size:24px;font-weight:500;">{{ s.name }}</span>
+                <span style="font-size:13px;color:var(--color-neutral-700);">{{ s.note }}</span>
+              </div>
+              <span style="font-family:var(--font-heading);font-size:40px;font-weight:400;font-feature-settings:'tnum';color:{{ s.color }};">{{ s.value }}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:var(--space-3);font-size:12px;color:var(--color-neutral-700);">
+              <span>{{ s.lo }}</span>
+              <input type="range" min="0" max="100" value="{{ s.pct }}" onInput="{{ s.onSlide }}" style="width:100%;accent-color:var(--color-accent);cursor:pointer;">
+              <span>{{ s.hi }}</span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <p style="margin:0;font-size:16px;line-height:1.65;text-align:justify;hyphens:auto;color:var(--color-neutral-800);">La Reeducación Postural Global trabaja las cadenas musculares completas, no un músculo aislado. Con posturas sostenidas y respiración guiada, la columna recupera sus curvas y la cabeza vuelve sobre la línea de carga.</p>
+      <p style="margin:0;font-size:12px;color:var(--color-neutral-700);">Valores ilustrativos. Cada evaluación es individual.</p>
+      <a class="btn btn-primary" href="https://wa.me/" target="_blank" style="align-self:flex-start;text-decoration:none;">Pedir turno por WhatsApp</a>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;autoPlay&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;showPlumb&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+// flat = per-segment angle with no curve, curved = maximal curve; slider 0..1 between them
+const SEG = { lumbar: { n: 5, r: 0.56, h: 0.38, disc: 0.13, flat: -0.03, curved: -0.22, ideal: -0.13 }, dorsal: { n: 12, r: 0.48, h: 0.3, disc: 0.08, flat: 0.0, curved: 0.11, ideal: 0.06 }, cervical: { n: 7, r: 0.34, h: 0.22, disc: 0.07, flat: 0.05, curved: -0.13, ideal: -0.08 } };
+const KEYS = ['cervical', 'dorsal', 'lumbar'];
+const deg = r => Math.round(Math.abs(r) * 180 / Math.PI);
+const lerp = (a, b, t) => a + (b - a) * t;
+const IDEAL = {}; KEYS.forEach(k => { const s = SEG[k]; IDEAL[k] = (s.ideal - s.flat) / (s.curved - s.flat); });
+const PRESETS = [
+  { id: 'ideal', name: 'Postura ideal', v: { ...IDEAL } },
+  { id: 'cifosis', name: 'Hipercifosis', v: { cervical: 0.3, dorsal: 1, lumbar: 0.5 } },
+  { id: 'lordosis', name: 'Hiperlordosis', v: { cervical: 0.72, dorsal: 0.55, lumbar: 1 } },
+  { id: 'cifolordosis', name: 'Cifolordosis', v: { cervical: 0.4, dorsal: 0.95, lumbar: 0.95 } },
+  { id: 'rectcerv', name: 'Rectificación cervical', v: { cervical: 0.12, dorsal: 0.55, lumbar: 0.53 } },
+  { id: 'plana', name: 'Espalda plana', v: { cervical: 0.5, dorsal: 0.1, lumbar: 0.1 } }
+];
+const DESC = {
+  ideal: 'Las tres curvas están equilibradas y la cabeza queda sobre la línea de plomada. El peso se reparte de forma pareja entre vértebras y discos.',
+  cifosis: 'La espalda alta se curva hacia adelante y los hombros se cierran. La cabeza se adelanta para compensar, lo que suele dar tensión cervical y dorsalgia.',
+  lordosis: 'La curva lumbar se acentúa y la pelvis bascula hacia adelante. Sobrecarga las articulaciones de la zona baja y es frecuente en la lumbalgia.',
+  cifolordosis: 'Hay cifosis dorsal y lordosis lumbar aumentadas a la vez: una curva compensa a la otra. Combina las molestias de ambos tramos.',
+  rectcerv: 'El cuello pierde su curva natural y queda recto o invertido. Se asocia a cervicalgia, cefaleas y a muchas horas frente a pantallas.',
+  plana: 'Las curvas dorsal y lumbar se reducen y la espalda queda rígida. Amortigua peor las cargas y limita la movilidad del tronco.'
+};
+const AUTO = ['ideal', 'cifosis', 'ideal', 'lordosis', 'ideal', 'plana'];
+
+class Component extends DCLogic {
+  state = { m: { ...PRESETS[1].v }, headCm: 0 };
+  mountRef = React.createRef();
+  target = { ...PRESETS[1].v };
+  setM = (k, v) => { this.userTouched = true; this.target[k] = v; };
+  setPreset = p => { this.userTouched = true; Object.assign(this.target, p.v); };
+
+  async componentDidMount() {
+    const THREE = await import('https://esm.sh/three@0.160.0');
+    const el = this.mountRef.current;
+    if (this._dead || !el) return;
+    const cs = getComputedStyle(document.documentElement);
+    const col = n => new THREE.Color(cs.getPropertyValue(n).trim() || '#888888');
+    const C = { fill: col('--color-neutral-100'), line: col('--color-neutral-700'), disc: col('--color-neutral-300'), acc: col('--color-accent'), skull: col('--color-neutral-500') };
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    el.appendChild(renderer.domElement);
+    const scene = new THREE.Scene();
+    const cam = new THREE.PerspectiveCamera(26, 1, 0.1, 200);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xd8d2cc, 1.6));
+    const dl = new THREE.DirectionalLight(0xffffff, 1.1); dl.position.set(6, 8, 4); scene.add(dl);
+
+    const fill = new THREE.MeshStandardMaterial({ color: C.fill, roughness: 0.85 });
+    const mats = {};
+    KEYS.concat('sacro').forEach(k => { mats[k] = new THREE.LineBasicMaterial({ color: C.line.clone() }); });
+    mats.skull = new THREE.LineBasicMaterial({ color: C.skull });
+    const discMat = new THREE.MeshStandardMaterial({ color: C.disc, roughness: 0.9 });
+    const add = (p, geo, k, mat, th) => { const m = new THREE.Mesh(geo, mat || fill); if (!mat) m.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, th || 25), mats[k])); p.add(m); return m; };
+
+    const root = new THREE.Group(); scene.add(root);
+    const sac = add(root, new THREE.CylinderGeometry(0.62, 0.16, 1.5, 5, 1), 'sacro'); sac.position.y = 0.75; sac.rotation.x = -0.15;
+    const joints = [];
+    let parent = root, y = 1.55;
+    ['lumbar', 'dorsal', 'cervical'].forEach(k => {
+      const s = SEG[k];
+      for (let i = 0; i < s.n; i++) {
+        const r = s.r - i * 0.012;
+        const g = new THREE.Group(); g.position.y = y; parent.add(g);
+        const b = add(g, new THREE.CylinderGeometry(r, r * 1.05, s.h, 28), k); b.position.y = s.h / 2; b.scale.z = 0.8;
+        const sp = add(g, new THREE.BoxGeometry(r * 0.22, s.h * 0.55, r * 1.4), k); sp.position.set(0, s.h * 0.35, -r * 1.45); sp.rotation.x = k === 'dorsal' ? -0.7 : -0.35;
+        [-1, 1].forEach(q => { const tp = add(g, new THREE.BoxGeometry(r * 0.95, s.h * 0.35, r * 0.26), k); tp.position.set(q * r * 1.15, s.h * 0.55, -r * 0.55); });
+        const d = add(g, new THREE.CylinderGeometry(r * 0.92, r * 0.92, s.disc, 24), k, discMat); d.position.y = s.h + s.disc / 2; d.scale.z = 0.8;
+        joints.push({ g, k });
+        parent = g; y = s.h + s.disc;
+      }
+    });
+    // Skull at representative scale: ~22 cm tall against a ~60 cm spine
+    const top = new THREE.Group(); top.position.y = SEG.cervical.h + 0.05; parent.add(top);
+    const skull = new THREE.Group(); scene.add(skull);
+    const cran = add(skull, new THREE.IcosahedronGeometry(1, 2), 'skull', null, 8); cran.scale.set(1.35, 1.25, 1.7); cran.position.set(0, 1.3, 0.25);
+    const face = add(skull, new THREE.IcosahedronGeometry(1, 1), 'skull', null, 8); face.scale.set(1.0, 0.85, 0.75); face.position.set(0, 0.7, 1.05);
+    const jaw = add(skull, new THREE.IcosahedronGeometry(1, 1), 'skull', null, 8); jaw.scale.set(0.85, 0.45, 0.8); jaw.position.set(0, 0.05, 0.95);
+    [-1, 1].forEach(q => { const o = new THREE.Mesh(new THREE.TorusGeometry(0.26, 0.015, 6, 32), new THREE.MeshBasicMaterial({ color: C.skull })); o.position.set(q * 0.45, 1.1, 1.72); skull.add(o); });
+    const placeSkull = bad => { skull.position.copy(new THREE.Vector3().setFromMatrixPosition(top.matrixWorld)); skull.rotation.x = 0.12 * bad; skull.updateMatrixWorld(true); };
+
+    const pose = t => joints.forEach(j => { j.g.rotation.x = lerp(SEG[j.k].flat, SEG[j.k].curved, t[j.k]); });
+    const wp = o => new THREE.Vector3().setFromMatrixPosition(o.matrixWorld);
+    pose(IDEAL); root.rotation.x = 0; root.updateMatrixWorld(true);
+    const a0 = wp(joints[0].g), b0 = wp(top);
+    root.rotation.x = Math.atan2(-(b0.z - a0.z), b0.y - a0.y); root.updateMatrixWorld(true);
+    placeSkull(0);
+    const box = new THREE.Box3().setFromObject(root).union(new THREE.Box3().setFromObject(skull)), ctr = box.getCenter(new THREE.Vector3()), size = box.getSize(new THREE.Vector3());
+    root.position.sub(ctr); root.updateMatrixWorld(true); placeSkull(0);
+    const base = wp(joints[0].g);
+    const spineLen = b0.distanceTo(a0) + 1.5;
+    const unitCm = 70 / spineLen;
+
+    const plumb = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -size.y * 0.6, base.z), new THREE.Vector3(0, size.y * 0.6, base.z)]), new THREE.LineDashedMaterial({ color: C.acc, dashSize: 0.18, gapSize: 0.12 }));
+    plumb.computeLineDistances(); scene.add(plumb);
+    const offGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+    const offLine = new THREE.Line(offGeo, new THREE.LineBasicMaterial({ color: C.acc })); scene.add(offLine);
+
+    const fit = () => {
+      const w = el.clientWidth, h = el.clientHeight; renderer.setSize(w, h); cam.aspect = w / h;
+      const dist = (size.y * 0.62) / Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)) * Math.max(1, 0.7 / cam.aspect);
+      cam.position.set(dist, 0, 0); cam.lookAt(0, 0, 0); cam.updateProjectionMatrix();
+    };
+    fit();
+    const ro = new ResizeObserver(fit); ro.observe(el);
+
+    const clock = new THREE.Clock();
+    const m = { ...this.target }, shown = {};
+    const tick = () => {
+      this.raf = requestAnimationFrame(tick);
+      const t = clock.getElapsedTime();
+      if (!this.userTouched && (this.props.autoPlay ?? true)) { const id = AUTO[Math.floor(t / 2.8) % AUTO.length]; Object.assign(this.target, PRESETS.find(p => p.id === id).v); }
+      let changed = false;
+      KEYS.forEach(k => {
+        m[k] += (this.target[k] - m[k]) * 0.07;
+        const bad = Math.abs(m[k] - IDEAL[k]) > 0.2;
+        if (shown[k] !== bad) { shown[k] = bad; mats[k].color.copy(bad ? C.acc : C.line); }
+        if (Math.round(m[k] * 100) !== Math.round(this.state.m[k] * 100)) changed = true;
+      });
+      pose(m);
+      root.updateMatrixWorld(true);
+      const hp = wp(top);
+      placeSkull(Math.max(0, (IDEAL.cervical - m.cervical) * 1.6));
+      offGeo.setFromPoints([new THREE.Vector3(0, hp.y, base.z), hp]);
+      plumb.visible = this.props.showPlumb ?? true; offLine.visible = plumb.visible;
+      const cm = Math.round(Math.abs(hp.z - base.z) * unitCm * 10) / 10;
+      if (changed || cm !== this.state.headCm) this.setState({ headCm: cm, m: { ...m } });
+      renderer.render(scene, cam);
+    };
+    tick();
+    this.cleanup = () => { cancelAnimationFrame(this.raf); ro.disconnect(); renderer.dispose(); renderer.domElement.remove(); };
+  }
+
+  componentWillUnmount() { this._dead = true; this.cleanup && this.cleanup(); }
+
+  renderVals() {
+    const m = this.state.m;
+    const ang = k => deg(SEG[k].n * lerp(SEG[k].flat, SEG[k].curved, m[k]));
+    const acc = 'var(--color-accent-700)', ink = 'var(--color-text)';
+    const off = k => Math.abs(m[k] - IDEAL[k]) > 0.2;
+    const match = PRESETS.find(p => KEYS.every(k => Math.abs(p.v[k] - this.target[k]) < 0.03));
+    const near = PRESETS.find(p => KEYS.every(k => Math.abs(p.v[k] - m[k]) < 0.04));
+    const row = (k, name, note, value, lo, hi) => ({ name, note, value, lo, hi, color: off(k) ? acc : ink, pct: Math.round(m[k] * 100), onSlide: e => this.setM(k, Number(e.target.value) / 100) });
+    return {
+      mountRef: this.mountRef,
+      stageLabel: near ? near.name : 'Personalizada',
+      descTitle: (match || near) ? (match || near).name : 'Postura personalizada',
+      desc: (match || near) ? DESC[(match || near).id] : 'Combinación ajustada a mano. En la evaluación medimos cada curva y definimos el tratamiento según tu caso.',
+      presets: PRESETS.map(p => ({ name: p.name, cls: match && match.id === p.id ? 'btn btn-primary' : 'btn btn-ghost', pick: () => this.setPreset(p) })),
+      stats: [
+        row('cervical', 'Cervical', 'Cabeza adelantada respecto de la plomada', this.state.headCm.toFixed(1).replace('.', ',') + ' cm', 'Rectificada', 'Hiperlordosis'),
+        row('dorsal', 'Dorsal', 'Cifosis de la espalda alta', ang('dorsal') + '°', 'Plana', 'Hipercifosis'),
+        row('lumbar', 'Lumbar', 'Lordosis de la zona baja', ang('lumbar') + '°', 'Rectificada', 'Hiperlordosis')
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

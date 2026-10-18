@@ -11,6 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
   <link rel="preload" as="video" href="assets/bg-loop.mp4" type="video/mp4" />
+  <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
 
   <style>
     :root {
@@ -205,6 +206,123 @@
     .creds strong { display: block; font-family: var(--serif); font-weight: 400; font-size: 1.6rem; line-height: 1.15; }
     .creds span { font-size: 14px; color: var(--ink-soft); }
 
+    /* Postura (3D spine) */
+    .posture-head { max-width: 46rem; }
+    .posture { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: clamp(32px, 5vw, 88px); margin-top: clamp(40px, 5vw, 64px); align-items: start; }
+    .spine-stage {
+      position: sticky; top: 90px; height: min(640px, 78vh); border-radius: 22px; overflow: hidden;
+      background: radial-gradient(ellipse at 50% 40%, var(--paper) 0%, var(--bone) 75%);
+      border: 1px solid var(--line);
+    }
+    .spine-canvas { position: absolute; inset: 0; opacity: 0; transition: opacity .8s var(--ease); }
+    .spine-stage.has-3d .spine-canvas { opacity: 1; }
+    /* Loader while three.js downloads and the model is built */
+    .spine-loader {
+      position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 18px; pointer-events: none;
+      transition: opacity .5s, visibility 0s .5s;
+    }
+    .spine-stage.has-3d .spine-loader, .spine-stage.no-webgl .spine-loader { opacity: 0; visibility: hidden; }
+    .spine-loader-bones { display: grid; gap: 5px; justify-items: center; }
+    .spine-loader-bones i { display: block; width: 30px; height: 9px; border-radius: 4px; background: var(--sage); opacity: .18; animation: vert 1.6s var(--ease) infinite; }
+    .spine-loader-bones i:nth-child(1) { width: 20px; animation-delay: .6s; }
+    .spine-loader-bones i:nth-child(2) { width: 24px; animation-delay: .4s; }
+    .spine-loader-bones i:nth-child(3) { width: 28px; animation-delay: .2s; }
+    @keyframes vert { 0%, 100% { opacity: .18; transform: scaleX(.85); } 40% { opacity: .85; transform: scaleX(1); } }
+    .spine-loader-text { font-size: 11px; letter-spacing: .24em; text-transform: uppercase; color: var(--ink-soft); }
+    .spine-loader-bar { display: block; width: 120px; height: 1px; background: var(--line); overflow: hidden; }
+    .spine-loader-bar i { display: block; height: 100%; background: var(--sage-deep); transform: scaleX(.05); transform-origin: left; transition: transform .4s var(--ease); }
+    .spine-canvas canvas { display: block; width: 100% !important; height: 100% !important; }
+    .spine-tools { display: contents; }
+    .spine-views { position: absolute; left: 14px; top: 14px; display: none; padding: 3px; border-radius: 999px; border: 1px solid var(--line); background: rgba(250, 247, 242, .82); backdrop-filter: blur(6px); }
+    .spine-stage.has-3d .spine-views { display: flex; }
+    .spine-views button {
+      padding: 7px 12px; border: 0; border-radius: 999px; background: transparent; color: var(--ink-soft); cursor: pointer;
+      font: 400 11px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; transition: background .3s, color .3s;
+    }
+    .spine-views button:hover { color: var(--ink); }
+    .spine-views button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+    .spine-views button:focus-visible { outline: 2px solid var(--sage); outline-offset: 2px; }
+    .spine-label { position: absolute; right: 22px; top: 14px; font-family: var(--serif); font-style: italic; font-size: 1.6rem; color: var(--sage-deep); pointer-events: none; transition: opacity .3s; }
+    .spine-legend { position: absolute; left: 14px; bottom: 14px; display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 7px 12px; border-radius: 999px; background: rgba(250, 247, 242, .82); backdrop-filter: blur(6px); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); pointer-events: none; }
+    .spine-legend i { display: inline-block; width: 18px; height: 0; margin-right: 8px; vertical-align: middle; border-top: 1px dashed var(--sage-deep); }
+    .spine-legend b { display: inline-block; width: 9px; height: 9px; margin-right: 8px; vertical-align: middle; border-radius: 50%; background: var(--bronze); }
+    .spine-fallback { position: absolute; inset: 0; display: none; place-items: center; padding: 30px; text-align: center; color: var(--ink-soft); font-size: 14px; }
+    .spine-stage.no-webgl .spine-fallback { display: grid; }
+    .spine-play {
+      position: absolute; right: 14px; bottom: 14px; display: none; align-items: center; gap: 8px; padding: 8px 14px 8px 12px; border-radius: 999px;
+      border: 1px solid var(--line); background: rgba(250, 247, 242, .82); backdrop-filter: blur(6px); color: var(--ink-soft);
+      font: 400 11px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; cursor: pointer;
+      transition: color .3s, border-color .3s;
+    }
+    .spine-play:hover { color: var(--ink); border-color: var(--ink); }
+    .spine-play:focus-visible { outline: 2px solid var(--sage); outline-offset: 3px; }
+    .spine-play svg { width: 10px; height: 10px; fill: currentColor; }
+    .spine-play .i-play, .spine-play[aria-pressed="true"] .i-pause { display: block; }
+    .spine-play .i-pause, .spine-play[aria-pressed="true"] .i-play { display: none; }
+    .spine-stage.has-3d .spine-play { display: flex; }
+    @media (min-width: 901px) and (pointer: fine) { .spine-stage.has-3d .spine-legend { max-width: calc(100% - 150px); } }
+
+    .eyebrow-sm { font-size: 11px; letter-spacing: .24em; text-transform: uppercase; color: var(--ink-faint); }
+    .presets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .preset {
+      padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--ink);
+      font: 400 12px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; cursor: pointer;
+      transition: background .4s var(--ease), color .4s, border-color .4s;
+    }
+    .preset:hover { border-color: var(--ink); }
+    .preset[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+    .preset:focus-visible, .seg input:focus-visible { outline: 2px solid var(--sage); outline-offset: 3px; }
+    .posture-desc { min-height: 132px; margin-top: 26px; }
+    .posture-desc h3 { margin: 0; font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 1.9rem; line-height: 1.1; color: var(--sage-deep); }
+    .posture-desc p { margin: 10px 0 0; color: var(--ink-soft); }
+
+    .segs { margin-top: 18px; border-top: 1px solid var(--line); }
+    .seg { padding: 20px 0 18px; border-bottom: 1px solid var(--line); }
+    .seg-top { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+    .seg-name { font-family: var(--serif); font-size: 1.6rem; line-height: 1.1; }
+    .seg-note { display: block; margin-top: 2px; font-size: 13.5px; color: var(--ink-soft); }
+    .seg-val { white-space: nowrap; font-family: var(--serif); font-size: clamp(2rem, 7vw, 2.4rem); line-height: 1; font-variant-numeric: tabular-nums; transition: color .4s; }
+    .seg.is-off .seg-val { color: var(--bronze); }
+    .seg-range { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; margin-top: 12px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); }
+    .seg input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 22px; background: transparent; cursor: pointer; }
+    .seg input[type=range]::-webkit-slider-runnable-track { height: 1px; background: var(--ink-faint); }
+    .seg input[type=range]::-moz-range-track { height: 1px; background: var(--ink-faint); }
+    .seg input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: -7.5px; border-radius: 50%; background: var(--paper); border: 1px solid var(--ink); transition: transform .3s var(--ease); }
+    .seg input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--paper); border: 1px solid var(--ink); }
+    .seg input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.2); }
+    .seg.is-off input[type=range]::-webkit-slider-thumb { border-color: var(--bronze); }
+    .spine-hint { position: absolute; left: 50%; bottom: 62px; transform: translateX(-50%); display: none; padding: 6px 12px; border-radius: 999px; background: rgba(250, 247, 242, .88); font-size: 12.5px; white-space: nowrap; color: var(--ink-soft); pointer-events: none; }
+    .spine-hint { transition: opacity .5s; }
+    .spine-stage.touched .spine-hint { opacity: 0; }
+    .spine-pin {
+      position: absolute; left: 0; top: 0; display: none; padding: 6px 11px; border-radius: 999px;
+      background: rgba(250, 247, 242, .88); border: 1px solid var(--line); color: var(--ink-soft);
+      font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; white-space: nowrap; pointer-events: none;
+      transition: color .3s, background .3s, border-color .3s;
+    }
+    .spine-pin::after { content: "⟷"; margin-left: 7px; letter-spacing: 0; }
+    .spine-pin.is-off { color: var(--bronze); border-color: rgba(168, 130, 90, .5); }
+    .spine-pin.is-active { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+    /* Touch devices: no sliders, each spine segment is dragged directly on the model */
+    @media (max-width: 900px), (pointer: coarse) {
+      .seg-range { display: none; }
+      .seg { padding: 16px 0; }
+      .spine-canvas { touch-action: pan-y; }
+      .spine-stage.has-3d .spine-hint, .spine-stage.has-3d .spine-pin { display: block; }
+      .spine-stage.has-3d .spine-pin[data-k="lat"], .spine-stage.view-posterior .spine-pin { display: none; }
+      .spine-stage.has-3d.view-posterior .spine-pin[data-k="lat"] { display: block; }
+      .spine-tools { position: absolute; left: 14px; top: 14px; display: flex; gap: 8px; }
+      .spine-views, .spine-play { position: static; }
+      .spine-play { padding: 0; width: 36px; justify-content: center; }
+      .spine-play [data-play-text] { display: none; }
+      .spine-label { top: 60px; font-size: 1.4rem; }
+      .posture:has(.no-webgl) .seg-range { display: grid; }
+      .posture:has(.no-webgl) .spine-hint { display: none; }
+    }
+    .posture-note { margin: 26px 0 0; color: var(--ink-soft); }
+    .posture-small { margin: 10px 0 0; font-size: 12.5px; color: var(--ink-faint); }
+    .posture .actions { margin-top: 30px; }
+
     /* Testimonials */
     .quotes-head { display: flex; justify-content: space-between; align-items: end; gap: 24px; flex-wrap: wrap; }
     .quotes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(20px, 3vw, 44px); margin-top: clamp(48px, 6vw, 80px); }
@@ -264,7 +382,8 @@
       .nav a:not(.nav-cta) { display: none; }
       .menu-btn { display: inline-block; }
       .rail { display: none; }
-      .split, .about { grid-template-columns: 1fr; }
+      .split, .about, .posture { grid-template-columns: 1fr; }
+      .spine-stage { position: relative; top: 0; height: 460px; }
       .split { align-items: start; }
       .steps, .quotes { grid-template-columns: 1fr; }
       .steps { gap: 36px; }
@@ -317,6 +436,7 @@
       <a class="link-line" href="#tratamientos">Tratamientos</a>
       <a class="link-line" href="#metodo">Método</a>
       <a class="link-line" href="#sobre-mi">Sobre mí</a>
+      <a class="link-line" href="#postura">Postura</a>
       <a class="link-line nav-cta" data-wa href="#" target="_blank" rel="noopener">Consultar</a>
       <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="menu">Menú</button>
     </nav>
@@ -326,6 +446,7 @@
     <a href="#tratamientos">Tratamientos</a>
     <a href="#metodo">Método</a>
     <a href="#sobre-mi">Sobre mí</a>
+    <a href="#postura">Postura</a>
     <a href="#testimonios">Pacientes</a>
     <a data-wa href="#" target="_blank" rel="noopener"><em>Consultar</em></a>
   </div>
@@ -415,6 +536,92 @@
               <li><strong>Consultorio</strong><span>Barrio / ciudad — completar</span></li>
               <li><strong>Obras sociales</strong><span>Consultá por la tuya</span></li>
             </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Columna postural interactiva (adaptado de asset-columna/Columna Postural.dc.html) -->
+      <section class="block" id="postura" style="padding-top: 0">
+        <div class="block-inner">
+          <div class="posture-head">
+            <span class="eyebrow" data-fade>Postural · RPG</span>
+            <h2 class="h2" data-fade>De la postura habitual a la <em>postura reeducada.</em></h2>
+            <p class="lead" data-fade>Elegí una postura o mové cada tramo para ver cómo cambia tu columna respecto de la línea de plomada, de perfil o desde atrás.</p>
+          </div>
+
+          <div class="posture">
+            <div class="spine-stage" id="spineStage" data-fade>
+              <div class="spine-canvas" id="spineCanvas" aria-hidden="true"></div>
+              <div class="spine-loader" role="status">
+                <span class="spine-loader-bones" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                <span class="spine-loader-text">Cargando modelo 3D</span>
+                <span class="spine-loader-bar" aria-hidden="true"><i id="spineProgress"></i></span>
+              </div>
+              <div class="spine-tools">
+                <div class="spine-views" role="group" aria-label="Vista del modelo">
+                  <button type="button" data-view="lateral" aria-pressed="true">Lateral</button>
+                  <button type="button" data-view="posterior" aria-pressed="false">Posterior</button>
+                </div>
+                <button type="button" class="spine-play" id="spinePlay" aria-pressed="false">
+                  <svg class="i-play" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 0.5v9l8-4.5z"/></svg>
+                  <svg class="i-pause" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 0.5h2.5v9H1.5zM6 0.5h2.5v9H6z"/></svg>
+                  <span data-play-text>Animar</span>
+                </button>
+              </div>
+              <span class="spine-hint">Tocá un tramo y deslizá hacia los lados</span>
+              <span class="spine-label" id="spineLabel">Hipercifosis</span>
+              <div class="spine-legend"><span><i></i>Línea de plomada</span><span><b></b>Fuera de rango</span></div>
+              <p class="spine-fallback">Tu navegador no puede mostrar el modelo 3D, pero podés recorrer las posturas con los botones.</p>
+            </div>
+
+            <div data-fade>
+              <span class="eyebrow-sm">Posturas</span>
+              <div class="presets" id="presets" role="group" aria-label="Elegí una postura"></div>
+              <div class="posture-desc" aria-live="polite">
+                <h3 id="postureTitle">Hipercifosis</h3>
+                <p id="postureText"></p>
+              </div>
+
+              <div class="segs">
+                <div class="seg" data-seg="cervical">
+                  <div class="seg-top">
+                    <div><span class="seg-name">Cervical</span><span class="seg-note">Cabeza adelantada respecto de la plomada</span></div>
+                    <span class="seg-val" data-val>0 cm</span>
+                  </div>
+                  <label class="seg-range"><span>Rectificada</span><input type="range" min="0" max="100" aria-label="Curva cervical" /><span>Acentuada</span></label>
+                </div>
+                <div class="seg" data-seg="dorsal">
+                  <div class="seg-top">
+                    <div><span class="seg-name">Dorsal</span><span class="seg-note">Cifosis de la espalda alta</span></div>
+                    <span class="seg-val" data-val>0°</span>
+                  </div>
+                  <label class="seg-range"><span>Plana</span><input type="range" min="0" max="100" aria-label="Curva dorsal" /><span>Hipercifosis</span></label>
+                </div>
+                <div class="seg" data-seg="lumbar">
+                  <div class="seg-top">
+                    <div><span class="seg-name">Lumbar</span><span class="seg-note">Lordosis de la zona baja</span></div>
+                    <span class="seg-val" data-val>0°</span>
+                  </div>
+                  <label class="seg-range"><span>Rectificada</span><input type="range" min="0" max="100" aria-label="Curva lumbar" /><span>Hiperlordosis</span></label>
+                </div>
+                <div class="seg" data-seg="lateral">
+                  <div class="seg-top">
+                    <div><span class="seg-name">Lateral</span><span class="seg-note">Escoliosis: ángulo de Cobb visto desde atrás</span></div>
+                    <span class="seg-val" data-val>0°</span>
+                  </div>
+                  <label class="seg-range"><span>Recta</span><input type="range" min="0" max="100" aria-label="Curva lateral" /><span>Escoliosis</span></label>
+                </div>
+              </div>
+
+              <p class="posture-note">La Reeducación Postural Global trabaja las cadenas musculares completas, no un músculo aislado. Con posturas sostenidas y respiración guiada, la columna recupera sus curvas y la cabeza vuelve sobre la línea de carga.</p>
+              <p class="posture-small">Valores ilustrativos. Cada evaluación es individual.</p>
+              <div class="actions">
+                <a class="btn" data-wa href="#" target="_blank" rel="noopener">
+                  <span>Evaluar mi postura</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 12h15m-6-6 6 6-6 6"/></svg>
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -677,6 +884,530 @@
     const railItems = document.querySelectorAll('#rail li');
     function setRail(id) { railItems.forEach((li) => li.classList.toggle('is-active', li.dataset.for === id)); }
     setRail('inicio');
+  </script>
+
+  <!-- Postura: spine model + controls. Data and geometry ported from asset-columna/Columna Postural.dc.html -->
+  <script type="module">
+    // flat = per-vertebra angle with no curve, curved = maximal curve; sliders go 0..1 between them
+    const SEG = {
+      lumbar:   { n: 5,  r: 0.56, h: 0.38, disc: 0.13, flat: -0.03, curved: -0.22, ideal: -0.13 },
+      dorsal:   { n: 12, r: 0.48, h: 0.3,  disc: 0.08, flat: 0.0,   curved: 0.11,  ideal: 0.06 },
+      cervical: { n: 7,  r: 0.34, h: 0.22, disc: 0.07, flat: 0.05,  curved: -0.13, ideal: -0.08 },
+    };
+    const KEYS = ['cervical', 'dorsal', 'lumbar'];
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const deg = (r) => Math.round(Math.abs(r) * 180 / Math.PI);
+    const IDEAL = {}; KEYS.forEach((k) => { const s = SEG[k]; IDEAL[k] = (s.ideal - s.flat) / (s.curved - s.flat); });
+
+    // Frontal plane (scoliosis), over the 17 thoracolumbar vertebrae as s = 0..1 from the sacrum up.
+    // escS: right thoracic + left lumbar curve; escC: one long left thoracolumbar curve. Both 0..1.
+    const LAT = ['escS', 'escC'], ALL = KEYS.concat(LAT);
+    IDEAL.escS = IDEAL.escC = 0;
+    const LAT_N = SEG.lumbar.n + SEG.dorsal.n;
+    const LAT_LEN = ['lumbar', 'dorsal'].reduce((a, k) => a + SEG[k].n * (SEG[k].h + SEG[k].disc), 0);
+    const LAT_A = { escS: 0.31, escC: 0.83 }; // lateral amplitude at 1, tuned to ~45° and ~40° Cobb
+    const TAU = Math.PI * 2;
+    // Normalized shape (peak 1, + = patient's left) and its slope; both curves start and end vertical
+    const latShape = (s, v) => v.escS * (Math.sin(TAU * s) - Math.sin(2 * TAU * s) / 2) + v.escC * (1 - Math.cos(TAU * s)) / 2;
+    const latSlope = (s, v) => LAT_A.escS * v.escS * TAU * (Math.cos(TAU * s) - Math.cos(2 * TAU * s)) + LAT_A.escC * v.escC * Math.PI * Math.sin(TAU * s);
+    // Absolute sideways tilt of each thoracolumbar vertebra (rotation about z)
+    const latTilt = (v) => Array.from({ length: LAT_N }, (_, i) => -Math.atan(latSlope((i + 0.5) / LAT_N, v) / LAT_LEN));
+    const cobb = (v) => { const t = latTilt(v); return Math.round((Math.max(...t) - Math.min(...t)) * 180 / Math.PI); };
+    const isLat = (v) => v.escS > 0.02 || v.escC > 0.02;
+    const PRESETS = [
+      { id: 'ideal', name: 'Postura ideal', v: { ...IDEAL } },
+      { id: 'cifosis', name: 'Hipercifosis', v: { cervical: 0.3, dorsal: 1, lumbar: 0.5 } },
+      { id: 'lordosis', name: 'Hiperlordosis', v: { cervical: 0.72, dorsal: 0.55, lumbar: 1 } },
+      { id: 'cifolordosis', name: 'Cifolordosis', v: { cervical: 0.4, dorsal: 0.95, lumbar: 0.95 } },
+      { id: 'rectcerv', name: 'Rectificación cervical', v: { cervical: 0.12, dorsal: 0.55, lumbar: 0.53 } },
+      { id: 'plana', name: 'Espalda plana', v: { cervical: 0.5, dorsal: 0.1, lumbar: 0.1 } },
+      { id: 'escoliosis', name: 'Escoliosis en S', v: { ...IDEAL, escS: 1 } },
+      { id: 'escoliosisC', name: 'Escoliosis en C', v: { ...IDEAL, escC: 1 } },
+      { id: 'cifoescoliosis', name: 'Cifoescoliosis', v: { cervical: 0.3, dorsal: 0.95, lumbar: 0.5, escS: 0.75 } },
+    ];
+    PRESETS.forEach((p) => { p.v = { escS: 0, escC: 0, ...p.v }; });
+    const DESC = {
+      ideal: 'Las tres curvas están equilibradas y la cabeza queda sobre la línea de plomada. El peso se reparte de forma pareja entre vértebras y discos.',
+      cifosis: 'La espalda alta se curva hacia adelante y los hombros se cierran. La cabeza se adelanta para compensar, lo que suele dar tensión cervical y dorsalgia.',
+      lordosis: 'La curva lumbar se acentúa y la pelvis bascula hacia adelante. Sobrecarga las articulaciones de la zona baja y es frecuente en la lumbalgia.',
+      cifolordosis: 'Hay cifosis dorsal y lordosis lumbar aumentadas a la vez: una curva compensa a la otra. Combina las molestias de ambos tramos.',
+      rectcerv: 'El cuello pierde su curva natural y queda recto o invertido. Se asocia a cervicalgia, cefaleas y a muchas horas frente a pantallas.',
+      plana: 'Las curvas dorsal y lumbar se reducen y la espalda queda rígida. Amortigua peor las cargas y limita la movilidad del tronco.',
+      escoliosis: 'Vista desde atrás, la columna se desvía en dos curvas: una dorsal y una lumbar que la compensa. Las vértebras también rotan y elevan las costillas de un lado, lo que forma la giba costal.',
+      escoliosisC: 'Una sola curva larga abarca la zona dorsal y lumbar. El tronco se carga hacia un costado y suele notarse un hombro o una cadera más alta que la otra.',
+      cifoescoliosis: 'Se suman una cifosis dorsal aumentada y una desviación lateral con rotación de las vértebras. Es más frecuente en adultos mayores y se trabaja en los dos planos.',
+    };
+    const CUSTOM = 'Combinación ajustada a mano. En la evaluación medimos cada curva y definimos el tratamiento según tu caso.';
+    const AUTO = ['ideal', 'cifosis', 'ideal', 'lordosis', 'ideal', 'escoliosis', 'ideal', 'plana'];
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const stage = document.getElementById('spineStage');
+    const mount = document.getElementById('spineCanvas');
+    const label = document.getElementById('spineLabel');
+    const titleEl = document.getElementById('postureTitle');
+    const textEl = document.getElementById('postureText');
+    const presetWrap = document.getElementById('presets');
+    const segEls = Object.fromEntries(KEYS.concat('lateral').map((k) => {
+      const el = document.querySelector(`.seg[data-seg="${k}"]`);
+      return [k, { el, val: el.querySelector('[data-val]'), input: el.querySelector('input') }];
+    }));
+
+    // ---- State: `target` is where the spine is heading, `m` is where it is now (eased) ----
+    const target = { ...PRESETS[1].v };
+    const m = { ...target };
+    let headCm = 0, has3D = false, animating = false;
+
+    // Auto-cycle through AUTO presets; stops when the user picks or drags anything, the button toggles it
+    const playBtn = document.getElementById('spinePlay');
+    let autoPlay = false, autoT0 = 0;
+    function setAuto(on) {
+      autoPlay = on; autoT0 = performance.now();
+      playBtn.setAttribute('aria-pressed', String(on));
+      playBtn.querySelector('[data-play-text]').textContent = on ? 'Pausar' : 'Animar';
+      playBtn.setAttribute('aria-label', on ? 'Pausar la animación de la columna' : 'Iniciar la animación de la columna');
+    }
+    setAuto(!reduce);
+    playBtn.addEventListener('click', () => setAuto(!autoPlay));
+
+    // Camera: side view for the sagittal curves, posterior view for scoliosis
+    let view = 'lateral';
+    const viewBtns = [...document.querySelectorAll('.spine-views [data-view]')];
+    function setView(v) {
+      view = v;
+      viewBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
+      stage.classList.toggle('view-posterior', v === 'posterior');
+      if (!animating) stepModel();
+    }
+    viewBtns.forEach((b) => b.addEventListener('click', () => { setAuto(false); setView(b.dataset.view); }));
+
+    const setTarget = (v) => { Object.assign(target, v); if (!animating) { Object.assign(m, v); stepModel(); } render(); };
+    // The lateral slider scales whichever scoliosis curve is present (S by default)
+    const latKey = (v) => (v.escC > v.escS ? 'escC' : 'escS');
+    const presetBtns = PRESETS.map((p) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'preset'; b.textContent = p.name;
+      b.addEventListener('click', () => { setAuto(false); setView(isLat(p.v) ? 'posterior' : 'lateral'); setTarget(p.v); });
+      presetWrap.appendChild(b);
+      return b;
+    });
+    KEYS.forEach((k) => segEls[k].input.addEventListener('input', (e) => {
+      setAuto(false); setView('lateral'); setTarget({ [k]: Number(e.target.value) / 100 });
+    }));
+    segEls.lateral.input.addEventListener('input', (e) => {
+      setAuto(false); setView('posterior'); setTarget({ [latKey(target)]: Number(e.target.value) / 100 });
+    });
+
+    const near = (v, tol) => PRESETS.find((p) => ALL.every((k) => Math.abs(p.v[k] - v[k]) < tol));
+    let lastKey = '';
+    function render() {
+      const match = near(target, 0.03), close = near(m, 0.04), shown = match || close;
+      const key = [shown && shown.id, match && match.id, ...ALL.map((k) => Math.round(m[k] * 100)), headCm].join('|');
+      if (key === lastKey) return; lastKey = key;
+      label.textContent = shown ? shown.name : 'Personalizada';
+      titleEl.textContent = shown ? shown.name : 'Postura personalizada';
+      textEl.textContent = shown ? DESC[shown.id] : CUSTOM;
+      presetBtns.forEach((b, i) => b.setAttribute('aria-pressed', String(!!match && match.id === PRESETS[i].id)));
+      KEYS.forEach((k) => {
+        const s = segEls[k], off = Math.abs(m[k] - IDEAL[k]) > 0.2;
+        s.el.classList.toggle('is-off', off);
+        s.val.textContent = k === 'cervical'
+          ? (has3D ? headCm.toFixed(1).replace('.', ',') + ' cm' : '—')
+          : deg(SEG[k].n * lerp(SEG[k].flat, SEG[k].curved, m[k])) + '°';
+        if (document.activeElement !== s.input) s.input.value = Math.round(m[k] * 100);
+      });
+      const lat = segEls.lateral, c = cobb(m);
+      lat.el.classList.toggle('is-off', c >= 10);
+      lat.val.textContent = c + '°';
+      if (document.activeElement !== lat.input) lat.input.value = Math.round(m[latKey(m)] * 100);
+    }
+    let stepModel = () => {}; // replaced once the 3D model is ready (renders one still frame)
+    render();
+
+    // ---- 3D model: loads only when the section gets close to the viewport ----
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) { io.disconnect(); init3D().catch((err) => { console.error(err); stage.classList.add('no-webgl'); }); }
+    }, { rootMargin: '400px' });
+    io.observe(stage);
+
+    // Building the model is split in steps that hand control back to the browser, so the page keeps
+    // scrolling and the loader keeps moving; `f` (0..1) fills the loader bar
+    const progressEl = document.getElementById('spineProgress');
+    const step = (f) => { progressEl.style.transform = `scaleX(${f})`; return new Promise((r) => requestAnimationFrame(() => setTimeout(r))); };
+
+    async function init3D() {
+      await step(0.1);
+      const THREE = await import('three');
+      const { mergeVertices, mergeGeometries } = await import('three/addons/utils/BufferGeometryUtils.js');
+      const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironment.js');
+      await step(0.25);
+      let renderer;
+      try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); } catch { stage.classList.add('no-webgl'); return; }
+      has3D = true;
+      const css = getComputedStyle(document.documentElement);
+      const col = (n, fb) => new THREE.Color(css.getPropertyValue(n).trim() || fb);
+      const C = {
+        bone: new THREE.Color('#e3d6bf'), boneOff: new THREE.Color('#d9b583'), disc: new THREE.Color('#b9c2bb'),
+        hole: new THREE.Color('#5d5246'), off: col('--bronze', '#a8825a'), plumb: col('--sage-deep', '#4b6250'),
+      };
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 0.95;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      mount.appendChild(renderer.domElement);
+
+      await step(0.35);
+      const scene = new THREE.Scene();
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+      const cam = new THREE.PerspectiveCamera(26, 1, 0.1, 200);
+      scene.add(new THREE.HemisphereLight(0xfffaf0, 0xcfc6b8, 0.55));
+      const key = new THREE.DirectionalLight(0xfff1de, 1.6);
+      key.position.set(7, 9, 6); key.castShadow = true;
+      key.shadow.mapSize.set(1536, 1536); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02; key.shadow.radius = 4;
+      scene.add(key); scene.add(key.target);
+      const rim = new THREE.DirectionalLight(0xe8f0ff, 0.7); rim.position.set(-6, 4, -7); scene.add(rim);
+
+      await step(0.5);
+      // ---- Materials: one bone material per region so a region can glow when out of range ----
+      const boneMat = () => new THREE.MeshStandardMaterial({ color: C.bone.clone(), roughness: 0.62, metalness: 0, envMapIntensity: 0.55, emissive: C.off.clone(), emissiveIntensity: 0 });
+      const mats = {};
+      KEYS.concat('sacro').forEach((k) => { mats[k] = boneMat(); });
+      const discMat = new THREE.MeshStandardMaterial({ color: C.disc, roughness: 0.45, envMapIntensity: 0.6 });
+      const holeMat = new THREE.MeshStandardMaterial({ color: C.hole, roughness: 1 });
+      const ribMat = new THREE.MeshStandardMaterial({ color: C.bone, roughness: 0.6, transparent: true, opacity: 0.26, depthWrite: false });
+
+      // Smooth shading: merge seams and recompute normals so bevels read as rounded bone
+      const smooth = (geo) => { geo.deleteAttribute('uv'); const g = mergeVertices(geo, 1e-4); g.computeVertexNormals(); return g; };
+      const add = (parent, geo, mat, shadow = true) => {
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.castShadow = shadow; mesh.receiveShadow = shadow;
+        parent.add(mesh); return mesh;
+      };
+      const up = new THREE.Vector3(0, 1, 0);
+      const capsule = (parent, a, b, rad, mat, seg = 10) => {
+        const dir = new THREE.Vector3().subVectors(b, a), len = dir.length();
+        const mesh = add(parent, new THREE.CapsuleGeometry(rad, Math.max(0.001, len), 4, seg), mat);
+        mesh.position.copy(a).addScaledVector(dir, 0.5);
+        mesh.quaternion.setFromUnitVectors(up, dir.normalize());
+        return mesh;
+      };
+      const V = (x, y, z) => new THREE.Vector3(x, y, z);
+
+      // Vertebral body / disc outline: an ellipse with the posterior (shape +y → world -z) side pressed in
+      const kidney = (rx, rz) => {
+        const s = new THREE.Shape();
+        for (let i = 0; i <= 64; i++) {
+          const t = (i / 64) * Math.PI * 2;
+          const dent = 0.32 * rz * Math.exp(-(((t - Math.PI / 2) / 0.5) ** 2));
+          const x = rx * Math.cos(t), y = rz * Math.sin(t) - dent;
+          i ? s.lineTo(x, y) : s.moveTo(x, y);
+        }
+        return s;
+      };
+      // Extrude a horizontal outline upward from y=0 to y=height, with rounded rims
+      const slab = (shape, height, bevel, waist = 0) => {
+        const g = new THREE.ExtrudeGeometry(shape, { depth: Math.max(0.001, height - bevel * 2), bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 3, curveSegments: 8, steps: waist ? 6 : 1 });
+        g.rotateX(-Math.PI / 2); g.translate(0, bevel, 0);
+        if (waist) {
+          const pa = g.attributes.position;
+          for (let i = 0; i < pa.count; i++) { const f = 1 - waist * Math.sin(Math.PI * Math.min(1, Math.max(0, pa.getY(i) / height))); pa.setX(i, pa.getX(i) * f); pa.setZ(i, pa.getZ(i) * f); }
+        }
+        return smooth(g);
+      };
+      // Extrude a sagittal profile (u = z, v = y) with thickness along x
+      const plate = (pts, thick) => {
+        const s = new THREE.Shape(pts.map(([u, v]) => new THREE.Vector2(u, v)));
+        const bevel = thick * 0.3;
+        const g = new THREE.ExtrudeGeometry(s, { depth: Math.max(0.001, thick - bevel * 2), bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel * 0.8, bevelSegments: 3 });
+        g.rotateY(-Math.PI / 2); g.translate((thick - bevel * 2) / 2, 0, 0);
+        return smooth(g);
+      };
+
+      // ---- One vertebra, built in its joint frame: body from y=0 to h, anterior is +z ----
+      // Returns one merged geometry per material; built once per region and reused (scaled) for every vertebra in it
+      const buildVertebra = (k, r, h) => {
+        const g = new THREE.Group();
+        const mat = mats[k], rz = r * 0.78;
+        add(g, slab(kidney(r * 0.94, rz * 0.94), h, r * 0.07, 0.09), mat);
+
+        // Neural arch (pedicles + laminae) around the vertebral foramen
+        const archR = r * (k === 'cervical' ? 0.1 : 0.09);
+        const archPts = [V(-0.6 * r, 0, -0.4 * r), V(-0.74 * r, 0, -0.95 * r), V(-0.5 * r, 0, -1.42 * r), V(0, 0, -1.6 * r), V(0.5 * r, 0, -1.42 * r), V(0.74 * r, 0, -0.95 * r), V(0.6 * r, 0, -0.4 * r)];
+        const archGeo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(archPts), 32, archR, 10, false);
+        archGeo.scale(1, 2.1, 1);
+        add(g, smooth(archGeo), mat).position.y = h * 0.58;
+
+        // Spinous process: short and forked in the neck, long and steep in the thorax, hatchet-shaped in the low back
+        const sp = {
+          cervical: [[-1.45, 0.35], [-1.45, 0.85], [-2.05, 0.62], [-2.3, 0.5], [-2.12, 0.42], [-2.28, 0.3], [-2.0, 0.22]],
+          dorsal: [[-1.35, 0.3], [-1.38, 0.95], [-1.95, -0.6], [-2.15, -1.55], [-2.0, -1.6], [-1.7, -0.6]],
+          lumbar: [[-1.4, 0.18], [-1.4, 0.95], [-2.3, 0.92], [-2.48, 0.72], [-2.44, 0.2], [-2.2, 0.06]],
+        }[k].map(([u, v]) => [u * r, v * h]);
+        add(g, plate(sp, r * (k === 'lumbar' ? 0.22 : 0.17)), mat);
+
+        // Transverse processes
+        [-1, 1].forEach((q) => {
+          if (k === 'cervical') capsule(g, V(q * 0.7 * r, h * 0.55, -0.45 * r), V(q * 1.3 * r, h * 0.5, -0.35 * r), r * 0.13, mat);
+          else if (k === 'dorsal') capsule(g, V(q * 0.68 * r, h * 0.62, -1.0 * r), V(q * 1.55 * r, h * 0.7, -1.5 * r), r * 0.12, mat);
+          else capsule(g, V(q * 0.68 * r, h * 0.55, -0.95 * r), V(q * 1.7 * r, h * 0.5, -1.15 * r), r * 0.085, mat);
+          // Articular pillar: superior and inferior facets meeting the neighbours
+          capsule(g, V(q * 0.56 * r, -h * 0.12, -1.08 * r), V(q * 0.56 * r, h * 1.1, -1.12 * r), r * 0.1, mat);
+          // Rib heads on the thoracic vertebrae, translucent so they don't hide the spine
+          if (k === 'dorsal') {
+            const rib = new THREE.CatmullRomCurve3([V(q * 1.45 * r, h * 0.7, -1.45 * r), V(q * 2.5 * r, h * 0.45, -1.6 * r), V(q * 3.5 * r, 0, -0.9 * r), V(q * 3.9 * r, -h * 0.4, 0.3 * r)]);
+            const ribMesh = add(g, new THREE.TubeGeometry(rib, 24, r * 0.09, 8, false), ribMat, false);
+            ribMesh.renderOrder = 2;
+          }
+        });
+        // Merge all parts that share a material into a single mesh (one draw call per material)
+        const byMat = new Map();
+        g.updateMatrixWorld(true);
+        g.children.forEach((c) => {
+          const geo = c.geometry.clone(); geo.applyMatrix4(c.matrix);
+          if (geo.attributes.uv) geo.deleteAttribute('uv');
+          const list = byMat.get(c.material) || []; list.push(geo.index ? geo : mergeVertices(geo)); byMat.set(c.material, list);
+        });
+        return [...byMat].map(([material, geos]) => [mergeGeometries(geos), material]);
+      };
+      const templates = {};
+      const vertebra = (g0, k, r, h, idx) => {
+        const f = r / SEG[k].r;
+        (templates[k] ||= buildVertebra(k, SEG[k].r, h)).forEach(([geo, material]) => {
+          const mesh = add(g0, geo, material, material !== ribMat);
+          mesh.scale.set(f, 1, f);
+          if (material === ribMat) { mesh.renderOrder = 2; mesh.scale.y = 1 + idx * 0.02; }
+          else { mesh.userData.region = k; pickables.push(mesh); }
+        });
+      };
+
+      const root = new THREE.Group(); scene.add(root);
+      const pickables = [];
+
+      // ---- Sacrum (curved wedge with foramina) + coccyx ----
+      const sacW = (yy) => 0.12 + 0.63 * Math.pow(yy / 1.5, 0.85);
+      const sacShape = new THREE.Shape();
+      for (let i = 0; i <= 20; i++) { const yy = 1.5 * (1 - i / 20); i ? sacShape.lineTo(sacW(yy), yy) : sacShape.moveTo(sacW(yy), yy); }
+      for (let i = 0; i <= 20; i++) { const yy = 1.5 * (i / 20); sacShape.lineTo(-sacW(yy), yy); }
+      const sacGeo = new THREE.ExtrudeGeometry(sacShape, { depth: 0.36, bevelEnabled: true, bevelThickness: 0.08, bevelSize: 0.07, bevelSegments: 3 });
+      sacGeo.translate(0, 0, -0.18);
+      const bend = (yy) => -0.38 * Math.pow(1 - Math.min(1, Math.max(0, yy / 1.5)), 1.6);
+      const pa = sacGeo.attributes.position;
+      for (let i = 0; i < pa.count; i++) { const yy = pa.getY(i); pa.setZ(i, pa.getZ(i) * (0.45 + 0.55 * yy / 1.5) + bend(yy)); }
+      const sacrum = new THREE.Group(); root.add(sacrum);
+      add(sacrum, smooth(sacGeo), mats.sacro);
+      [1.18, 0.88, 0.6, 0.36].forEach((yy) => [-1, 1].forEach((q) => {
+        const f = add(sacrum, new THREE.SphereGeometry(0.055, 12, 8), holeMat, false);
+        f.scale.set(1, 0.8, 0.35);
+        f.position.set(q * sacW(yy) * 0.45, yy, 0.26 * (0.45 + 0.55 * yy / 1.5) + bend(yy) - 0.005);
+      }));
+      [[0, -0.1, -0.37, 0.085], [0, -0.24, -0.33, 0.068], [0, -0.35, -0.26, 0.052], [0, -0.43, -0.18, 0.04]].forEach(([x, yy, z, rr]) => {
+        const c = add(sacrum, new THREE.SphereGeometry(rr, 16, 12), mats.sacro); c.position.set(x, yy, z); c.scale.set(1.25, 0.8, 1);
+      });
+      sacrum.rotation.x = -0.15;
+
+      // ---- Column ----
+      const joints = [], discGeos = {};
+      let parent = root, y = 1.55, idx = 0;
+      for (const k of ['lumbar', 'dorsal', 'cervical']) {
+        await step({ lumbar: 0.55, dorsal: 0.65, cervical: 0.75 }[k]);
+        const s = SEG[k];
+        for (let i = 0; i < s.n; i++) {
+          const r = s.r - i * 0.012;
+          const g = new THREE.Group(); g.position.y = y; parent.add(g);
+          // The bone sits in its own group so the scoliotic axial rotation doesn't carry up the chain
+          const body = new THREE.Group(); g.add(body);
+          vertebra(body, k, r, s.h, idx++);
+          discGeos[k] ||= slab(kidney(s.r * 0.9, s.r * 0.72), s.disc, s.disc * 0.3);
+          const d = add(body, discGeos[k], discMat);
+          d.position.y = s.h; d.scale.set(r / s.r, 1, r / s.r); d.userData.region = k; pickables.push(d);
+          joints.push({ g, body, k });
+          parent = g; y = s.h + s.disc;
+        }
+      }
+      await step(0.8);
+
+      // ---- Skull at representative scale (~22 cm against a ~60 cm spine) ----
+      const top = new THREE.Group(); top.position.y = SEG.cervical.h + 0.05; parent.add(top);
+      const skull = new THREE.Group(); scene.add(skull);
+      // Translucent head sculpted from one sphere (anatomy-app style): the spine stays the solid focus
+      const ss = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+      const gs = (dx, dy, sx, sy) => Math.exp(-((dx / sx) ** 2) - ((dy / sy) ** 2));
+      const headGeo = new THREE.SphereGeometry(1, 128, 96);
+      { const pa = headGeo.attributes.position;
+        for (let i = 0; i < pa.count; i++) {
+          const x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i), ax = Math.abs(x);
+          const front = ss(0.55, 0.95, z);
+          let X = x * 1.12 * (1 - 0.2 * Math.max(0, -y) * Math.max(0, z));
+          let Y = y * 1.62;
+          let Z = z * 1.42 * (1 + 0.1 * Math.max(0, -z) * ss(-0.2, 0.4, y));
+          const jaw = ss(-0.15, -0.7, y) * ss(-0.1, 0.6, z); Z += 0.22 * jaw;                      // jaw & chin forward
+          const nape = ss(-0.25, -0.9, y) * ss(0.15, -0.6, z); Y += 0.4 * nape; Z += 0.3 * nape;    // under the occiput
+          Z += 0.3 * gs(x, y + 0.1, 0.085, 0.16) * front;                                           // nose
+          Z += 0.05 * gs(0, y - 0.2, 1, 0.07) * front;                                              // brow
+          Z -= 0.1 * gs(ax - 0.34, y - 0.07, 0.12, 0.08) * front;                                   // eye sockets
+          Z += 0.05 * gs(x, y + 0.5, 0.16, 0.05) * front;                                           // lips
+          Z += 0.07 * gs(x, y + 0.74, 0.2, 0.08) * ss(0.4, 0.9, z);                                 // chin
+          X += Math.sign(x) * 0.14 * gs(y, z + 0.08, 0.14, 0.09) * ss(0.82, 0.98, ax);              // ears
+          pa.setXYZ(i, X, Y, Z);
+        }
+        headGeo.computeVertexNormals(); }
+      const headMat = new THREE.MeshStandardMaterial({ color: '#e6d9c3', roughness: 0.45, envMapIntensity: 0.8, transparent: true, opacity: 0.5, depthWrite: false });
+      const head = add(skull, headGeo, headMat, false);
+      head.position.set(0, 1.05, 0.3); head.renderOrder = 3;
+      const wp = (o) => new THREE.Vector3().setFromMatrixPosition(o.matrixWorld);
+      const placeSkull = (bad) => { skull.position.copy(wp(top)); skull.rotation.x = 0.12 * bad; skull.updateMatrixWorld(true); };
+
+      // Sagittal curve per vertebra (x), plus the scoliosis: sideways tilt (z) and axial rotation toward the convexity (y)
+      const pose = (t) => {
+        const tilt = latTilt(t), twist = tilt.map((_, i) => 0.35 * latShape((i + 0.5) / LAT_N, t));
+        joints.forEach((j, i) => {
+          j.g.rotation.x = lerp(SEG[j.k].flat, SEG[j.k].curved, t[j.k]);
+          const prev = i ? i - 1 : -1, cur = i < LAT_N ? i : -1;
+          j.g.rotation.z = (cur < 0 ? 0 : tilt[cur]) - (prev < 0 || prev >= LAT_N ? 0 : tilt[prev]);
+          j.body.rotation.y = cur < 0 ? 0 : twist[cur];
+        });
+      };
+      pose(IDEAL); root.updateMatrixWorld(true);
+      const a0 = wp(joints[0].g), b0 = wp(top);
+      root.rotation.x = Math.atan2(-(b0.z - a0.z), b0.y - a0.y); root.updateMatrixWorld(true);
+      placeSkull(0);
+      const box = new THREE.Box3().setFromObject(root).union(new THREE.Box3().setFromObject(skull));
+      const ctr = box.getCenter(new THREE.Vector3()), size = box.getSize(new THREE.Vector3());
+      root.position.sub(ctr); root.updateMatrixWorld(true); placeSkull(0);
+      const base = wp(joints[0].g);
+      const unitCm = 70 / (b0.distanceTo(a0) + 1.5);
+
+      // Shadow camera sized to the model
+      const sc = key.shadow.camera, ext = Math.max(size.x, size.y, size.z) * 0.75;
+      sc.left = -ext; sc.right = ext; sc.top = ext; sc.bottom = -ext; sc.near = 0.5; sc.far = 60; sc.updateProjectionMatrix();
+
+      const plumb = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -size.y * 0.6, base.z), new THREE.Vector3(0, size.y * 0.6, base.z)]),
+        new THREE.LineDashedMaterial({ color: C.plumb, dashSize: 0.18, gapSize: 0.12 }));
+      plumb.computeLineDistances(); scene.add(plumb);
+      const offGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+      scene.add(new THREE.Line(offGeo, new THREE.LineBasicMaterial({ color: C.off })));
+
+      // Three-quarter side view so the bodies and processes read in depth, or from behind (screen right = patient's right);
+      // the lights turn with the camera and the pointer adds a slight parallax
+      const YAWS = { lateral: 0.38, posterior: -Math.PI / 2 + 0.14 };
+      const yawOf = () => YAWS[view] + parallax;
+      let dist = 10, parallax = 0, yaw = yawOf();
+      const placeCam = () => {
+        cam.position.set(Math.cos(yaw) * dist, dist * 0.06, Math.sin(yaw) * dist); cam.lookAt(0, 0, 0);
+        key.position.set(Math.cos(yaw + 0.33) * 9.2, 9, Math.sin(yaw + 0.33) * 9.2);
+        rim.position.set(Math.cos(yaw - 2.66) * 9.2, 4, Math.sin(yaw - 2.66) * 9.2);
+      };
+      const fit = () => {
+        const w = mount.clientWidth, h = mount.clientHeight; if (!w || !h) return;
+        renderer.setSize(w, h, false); cam.aspect = w / h;
+        dist = (size.y * 0.62) / Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)) * Math.max(1, 0.7 / cam.aspect);
+        placeCam(); cam.updateProjectionMatrix();
+        if (!animating) renderer.render(scene, cam);
+      };
+      await step(0.9);
+      if (renderer.compileAsync) await renderer.compileAsync(scene, cam); // compile shaders without blocking
+      await step(1);
+      fit(); new ResizeObserver(fit).observe(mount);
+      if (!reduce && matchMedia('(hover: hover)').matches) {
+        stage.addEventListener('pointermove', (e) => { const r = stage.getBoundingClientRect(); parallax = ((e.clientX - r.left) / r.width - 0.5) * 0.5; });
+        stage.addEventListener('pointerleave', () => { parallax = 0; });
+      }
+
+      // ---- Touch: drag a segment sideways to change its curve (replaces the sliders on touch layouts) ----
+      const touchUI = matchMedia('(max-width: 900px), (pointer: coarse)');
+      const NAMES = { cervical: 'Cervical', dorsal: 'Dorsal', lumbar: 'Lumbar', lat: 'Escoliosis' };
+      // Dragging toward where the curve bulges increases it: kyphosis bows back (screen right), lordoses bow forward (left).
+      // From behind, the S curve's thoracic convexity is to the right and the C curve's to the left.
+      const BOW = { cervical: -1, dorsal: 1, lumbar: -1 };
+      const mid = {}; KEYS.forEach((k) => { const js = joints.filter((j) => j.k === k); mid[k] = js[Math.floor(js.length / 2)].g; });
+      mid.lat = mid.dorsal;
+      const pins = Object.fromEntries(KEYS.concat('lat').map((k) => { const el = document.createElement('span'); el.className = 'spine-pin'; el.dataset.k = k; el.textContent = NAMES[k]; stage.appendChild(el); return [k, el]; }));
+      stage.classList.add('has-3d');
+      const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), proj = new THREE.Vector3();
+      let active = null, drag = null, releaseTimer = 0;
+      const pickRegion = (e) => {
+        const rc = mount.getBoundingClientRect();
+        ndc.set(((e.clientX - rc.left) / rc.width) * 2 - 1, -((e.clientY - rc.top) / rc.height) * 2 + 1);
+        ray.setFromCamera(ndc, cam);
+        const hit = ray.intersectObjects(pickables, false)[0];
+        return hit ? hit.object.userData.region : null;
+      };
+      const setActive = (k) => { clearTimeout(releaseTimer); active = k; if (!animating) stepModel(); };
+      mount.addEventListener('pointerdown', (e) => {
+        if (!touchUI.matches) return;
+        let k = pickRegion(e); if (!k) return;
+        let bow = BOW[k];
+        if (view === 'posterior') { k = latKey(target); bow = k === 'escC' ? -1 : 1; }
+        drag = { k, bow, x0: e.clientX, v0: target[k], w: mount.clientWidth };
+        setAuto(false); setActive(view === 'posterior' ? 'lat' : k); stage.classList.add('touched');
+      });
+      mount.addEventListener('pointermove', (e) => {
+        if (!drag) return;
+        const v = Math.min(1, Math.max(0, drag.v0 + ((e.clientX - drag.x0) / drag.w) * 1.8 * drag.bow));
+        target[drag.k] = v; if (!animating) { m[drag.k] = v; stepModel(); }
+      });
+      const endDrag = () => { if (!drag) return; drag = null; releaseTimer = setTimeout(() => setActive(null), 700); };
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => mount.addEventListener(ev, endDrag));
+
+      const shownOff = {};
+      stepModel = () => {
+        if (!animating) { yaw = yawOf(); placeCam(); } // off-screen: snap the camera too
+        const latBad = cobb(m) >= 10;
+        pins.lat.classList.toggle('is-off', latBad);
+        pins.lat.classList.toggle('is-active', active === 'lat');
+        KEYS.forEach((k) => {
+          // A scoliosis lights up the thoracolumbar segments
+          const thl = k !== 'cervical', act = active === k || (active === 'lat' && thl);
+          const bad = Math.abs(m[k] - IDEAL[k]) > 0.2 || (latBad && thl), state = (bad ? 'off' : '') + (act ? 'act' : '');
+          if (shownOff[k] !== state) {
+            shownOff[k] = state;
+            mats[k].color.copy(bad ? C.boneOff : C.bone);
+            mats[k].emissive.copy(act ? C.plumb : C.off);
+            mats[k].emissiveIntensity = act ? 0.22 : bad ? 0.16 : 0;
+            pins[k].classList.toggle('is-off', Math.abs(m[k] - IDEAL[k]) > 0.2);
+            pins[k].classList.toggle('is-active', act);
+          }
+        });
+        pose(m); root.updateMatrixWorld(true);
+        const hp = wp(top);
+        placeSkull(Math.max(0, (IDEAL.cervical - m.cervical) * 1.6));
+        offGeo.setFromPoints([new THREE.Vector3(0, hp.y, base.z), hp]);
+        headCm = Math.round(Math.abs(hp.z - base.z) * unitCm * 10) / 10;
+        render();
+        renderer.render(scene, cam);
+        if (touchUI.matches) {
+          // Label each segment just in front of it (screen left = anterior)
+          const w = mount.clientWidth, h = mount.clientHeight;
+          KEYS.concat('lat').forEach((k) => {
+            proj.setFromMatrixPosition(mid[k].matrixWorld).project(cam);
+            const x = (proj.x * 0.5 + 0.5) * w, y = (-proj.y * 0.5 + 0.5) * h;
+            const right = Math.max(pins[k].offsetWidth + 12, x - 34); // keep the label inside the card
+            pins[k].style.transform = `translate(${Math.round(right)}px, ${Math.round(y)}px) translate(-100%, -50%)`;
+          });
+        }
+      };
+      stepModel();
+
+      // Animate only while visible; off-screen, control changes snap and render one frame
+      let visible = false, raf = 0, lastAuto = '';
+      const tick = () => {
+        raf = visible ? requestAnimationFrame(tick) : 0;
+        const t = (performance.now() - autoT0) / 1000;
+        if (autoPlay) {
+          const p = PRESETS.find((q) => q.id === AUTO[Math.floor(t / 2.8) % AUTO.length]);
+          if (p.id !== lastAuto) { lastAuto = p.id; Object.assign(target, p.v); setView(isLat(p.v) ? 'posterior' : 'lateral'); }
+        } else lastAuto = '';
+        ALL.forEach((k) => { m[k] += (target[k] - m[k]) * (reduce ? 1 : 0.07); });
+        yaw += (yawOf() - yaw) * (reduce ? 1 : 0.06); placeCam();
+        stepModel();
+      };
+      new IntersectionObserver((es) => {
+        visible = animating = es.some((e) => e.isIntersecting);
+        if (visible && !raf) tick();
+      }).observe(stage);
+    }
   </script>
 </body>
 </html>

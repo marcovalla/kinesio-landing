@@ -495,6 +495,24 @@
     document.querySelectorAll('[data-wa]').forEach((a) => (a.href = waUrl));
     document.getElementById('year').textContent = new Date().getFullYear();
 
+    // Autoplay safeguard: some browsers (iOS Low Power Mode, battery/data saver,
+    // Firefox media blocking) refuse muted autoplay. Retry now, when the tab
+    // becomes visible, and on the first touch/scroll/click.
+    (() => {
+      const vids = [...document.querySelectorAll('video[autoplay]')];
+      const tryPlay = (v) => {
+        v.muted = true; v.defaultMuted = true; v.playsInline = true;
+        if (v.dataset.hold) return; // paused on purpose (covered by the sheet)
+        const p = v.play(); if (p) p.catch(() => {});
+      };
+      const all = () => vids.forEach((v) => v.paused && tryPlay(v));
+      all();
+      addEventListener('load', all);
+      document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && all());
+      const kick = () => { all(); if (vids.every((v) => !v.paused || v.dataset.hold)) ['touchstart', 'pointerdown', 'scroll', 'keydown'].forEach((e) => removeEventListener(e, kick)); };
+      ['touchstart', 'pointerdown', 'scroll', 'keydown'].forEach((e) => addEventListener(e, kick, { passive: true }));
+    })();
+
     // Mobile menu
     const menu = document.getElementById('menu');
     const menuBtn = document.getElementById('menuBtn');
@@ -621,7 +639,7 @@
       const bg = document.getElementById('bgVideo');
       ScrollTrigger.create({
         trigger: '#sheet', start: 'top top',
-        onEnter: () => bg.pause(), onLeaveBack: () => bg.play(),
+        onEnter: () => { bg.dataset.hold = '1'; bg.pause(); }, onLeaveBack: () => { delete bg.dataset.hold; bg.play().catch(() => {}); },
       });
 
       // Fade-ups inside the sheet

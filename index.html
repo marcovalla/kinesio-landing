@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lic. Nombre Apellido · Kinesiología</title>
+  <meta name="description" content="Kinesiología y rehabilitación personalizada. Consultas por WhatsApp, atención en consultorio y a domicilio." />
+  <meta name="theme-color" content="#f4efe7" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="preload" as="video" href="assets/bg-loop.mp4" type="video/mp4" />
+
+  <style>
+    :root {
+      --bone: #f4efe7;
+      --paper: #faf7f2;
+      --ink: #1d2622;
+      --ink-soft: rgba(29, 38, 34, .68);
+      --ink-faint: rgba(29, 38, 34, .42);
+      --line: rgba(29, 38, 34, .16);
+      --sage: #6d8570;
+      --sage-deep: #4b6250;
+      --bronze: #a8825a;
+      --serif: "Cormorant Garamond", "Times New Roman", serif;
+      --sans: "Jost", system-ui, sans-serif;
+      --pad: clamp(20px, 5vw, 72px);
+      --ease: cubic-bezier(.2, .7, .1, 1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0; background: var(--bone); color: var(--ink);
+      font-family: var(--sans); font-weight: 300; font-size: 17px; line-height: 1.6;
+      -webkit-font-smoothing: antialiased; overflow-x: hidden;
+    }
+    a { color: inherit; text-decoration: none; }
+    img, video { display: block; max-width: 100%; }
+    ::selection { background: var(--sage); color: var(--paper); }
+
+    /* ---------- Fixed video backdrop ---------- */
+    .backdrop { position: fixed; inset: 0; z-index: 0; overflow: hidden; background: var(--bone); }
+    .backdrop video {
+      position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+      filter: saturate(.78) brightness(1.06) contrast(.96);
+      transform: scale(1.06); transform-origin: 60% 50%;
+    }
+    /* Light haze keeps text legible while the room stays visible */
+    .haze {
+      position: absolute; inset: 0;
+      background:
+        linear-gradient(90deg, rgba(244, 239, 231, .9) 0%, rgba(244, 239, 231, .7) 40%, rgba(244, 239, 231, .5) 70%, rgba(244, 239, 231, .42) 100%),
+        linear-gradient(180deg, rgba(244, 239, 231, .55) 0%, rgba(244, 239, 231, 0) 22%, rgba(244, 239, 231, 0) 70%, rgba(244, 239, 231, .6) 100%);
+    }
+    .haze-full { position: absolute; inset: 0; background: var(--bone); opacity: 0; }
+    .grain {
+      position: absolute; inset: -50%; opacity: .06; pointer-events: none; mix-blend-mode: multiply;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+      animation: grain 1.2s steps(4) infinite;
+    }
+    @keyframes grain { 25% { transform: translate(-3%, 2%); } 50% { transform: translate(2%, -3%); } 75% { transform: translate(-2%, -1%); } }
+
+    /* ---------- Header: text only, transparent ---------- */
+    .header {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 40;
+      display: flex; align-items: center; justify-content: space-between; gap: 24px;
+      padding: 26px var(--pad);
+      transition: transform .6s var(--ease), color .4s;
+    }
+    .header::before {
+      content: ""; position: absolute; inset: 0 0 -30px; z-index: -1; pointer-events: none; opacity: 0;
+      background: linear-gradient(180deg, var(--paper) 55%, rgba(250, 247, 242, 0));
+      transition: opacity .5s var(--ease);
+    }
+    .header.on-sheet::before { opacity: 1; }
+    .header.is-hidden { transform: translateY(-110%); }
+    .brand { display: flex; flex-direction: column; line-height: 1; }
+    .brand-name { font-family: var(--serif); font-size: 25px; font-weight: 400; letter-spacing: .01em; }
+    .brand-role { white-space: nowrap; margin-top: 6px; font-size: 10.5px; letter-spacing: .32em; text-transform: uppercase; color: var(--ink-soft); }
+    .nav { display: flex; align-items: center; gap: clamp(20px, 3vw, 44px); font-size: 12.5px; letter-spacing: .2em; text-transform: uppercase; }
+    .nav a:not(.nav-cta) { color: var(--ink-soft); transition: color .3s; }
+    .nav a:not(.nav-cta):hover { color: var(--ink); }
+    .link-line { position: relative; padding-bottom: 4px; }
+    .link-line::after {
+      content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: currentColor;
+      transform: scaleX(.35); transform-origin: left; transition: transform .5s var(--ease);
+    }
+    .link-line:hover::after { transform: scaleX(1); }
+    .nav-cta { color: var(--ink); }
+    .menu-btn { display: none; background: none; border: 0; padding: 8px 0; color: inherit; font: inherit; font-size: 12.5px; letter-spacing: .2em; text-transform: uppercase; cursor: pointer; }
+
+    /* ---------- Scene rail (progress over the video) ---------- */
+    .rail {
+      position: fixed; right: var(--pad); top: 50%; z-index: 30; transform: translateY(-50%);
+      display: flex; flex-direction: column; gap: 18px; list-style: none; margin: 0; padding: 0;
+      font-size: 11px; letter-spacing: .24em; text-transform: uppercase; color: var(--ink-faint);
+    }
+    .rail li { display: flex; align-items: center; justify-content: flex-end; gap: 12px; transition: color .5s; }
+    .rail li::after { content: ""; width: 18px; height: 1px; background: currentColor; transition: width .6s var(--ease); }
+    .rail li.is-active { color: var(--ink); }
+    .rail li.is-active::after { width: 44px; }
+    .rail .rail-label { opacity: 0; transform: translateX(8px); transition: opacity .5s, transform .5s var(--ease); }
+    .rail li.is-active .rail-label { opacity: 1; transform: none; }
+
+    /* ---------- Scenes floating over the video ---------- */
+    main { position: relative; z-index: 10; }
+    .scene {
+      position: relative; min-height: 100vh; min-height: 100svh;
+      display: flex; align-items: center; padding: 120px var(--pad);
+    }
+    .scene-inner { width: 100%; max-width: 1320px; margin: 0 auto; }
+    @media (min-width: 901px) { .scene { padding-right: calc(var(--pad) + 150px); } }
+
+    .eyebrow { display: inline-flex; align-items: center; gap: 14px; font-size: 11.5px; letter-spacing: .32em; text-transform: uppercase; color: var(--sage-deep); }
+    .eyebrow::before { content: ""; width: 36px; height: 1px; background: currentColor; }
+
+    .display {
+      margin: 28px 0 0; font-family: var(--serif); font-weight: 300;
+      font-size: clamp(3.4rem, 9.4vw, 9.2rem); line-height: .9; letter-spacing: -.02em;
+    }
+    .display em { font-style: italic; color: var(--sage-deep); }
+    .line { display: block; overflow: hidden; padding-bottom: .06em; }
+    .line > span { display: inline-block; }
+
+    .lead { max-width: 30rem; margin: 34px 0 0; font-size: clamp(16px, 1.35vw, 19px); color: var(--ink-soft); }
+
+    .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 18px 34px; margin-top: 46px; }
+    .btn {
+      position: relative; display: inline-flex; align-items: center; gap: 14px; overflow: hidden;
+      padding: 19px 30px; border-radius: 999px; background: var(--ink); color: var(--paper);
+      font-size: 13px; letter-spacing: .18em; text-transform: uppercase; font-weight: 400;
+      transition: transform .5s var(--ease), box-shadow .5s var(--ease);
+      box-shadow: 0 18px 40px -22px rgba(29, 38, 34, .7);
+    }
+    .btn::before {
+      content: ""; position: absolute; inset: 0; border-radius: inherit; background: var(--sage-deep);
+      transform: translateY(101%); transition: transform .55s var(--ease);
+    }
+    .btn > * { position: relative; }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 26px 50px -24px rgba(75, 98, 80, .9); }
+    .btn:hover::before { transform: none; }
+    .btn svg { width: 17px; height: 17px; transition: transform .5s var(--ease); }
+    .btn:hover svg { transform: translateX(4px); }
+    .text-link { font-size: 13px; letter-spacing: .18em; text-transform: uppercase; }
+
+    .hero-meta {
+      position: absolute; left: var(--pad); right: var(--pad); bottom: 34px;
+      display: flex; justify-content: space-between; align-items: flex-end; gap: 20px;
+      font-size: 11.5px; letter-spacing: .24em; text-transform: uppercase; color: var(--ink-soft);
+    }
+    .scroll-cue { display: flex; align-items: center; gap: 14px; }
+    .scroll-cue i { position: relative; display: block; width: 1px; height: 46px; background: var(--line); overflow: hidden; }
+    .scroll-cue i::after { content: ""; position: absolute; left: 0; top: -40%; width: 1px; height: 40%; background: var(--ink); animation: cue 2.4s var(--ease) infinite; }
+    @keyframes cue { to { top: 100%; } }
+
+    /* Services scene */
+    .split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: clamp(32px, 6vw, 110px); align-items: start; }
+    .h2 { margin: 26px 0 0; font-family: var(--serif); font-weight: 300; font-size: clamp(2.6rem, 5.4vw, 5.4rem); line-height: .98; letter-spacing: -.015em; }
+    .h2 em { font-style: italic; color: var(--sage-deep); }
+    .services { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+    .services li {
+      display: grid; grid-template-columns: 54px 1fr auto; align-items: baseline; gap: 18px;
+      padding: 22px 0; border-bottom: 1px solid var(--line); cursor: default;
+    }
+    .services .n { font-size: 12px; letter-spacing: .2em; color: var(--ink-faint); }
+    .services h3 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: clamp(1.6rem, 2.4vw, 2.2rem); line-height: 1.1; transition: transform .6s var(--ease), color .4s; }
+    .services p { grid-column: 2 / 4; margin: 6px 0 0; max-height: 0; opacity: 0; overflow: hidden; font-size: 15px; color: var(--ink-soft); transition: max-height .6s var(--ease), opacity .5s; }
+    .services .arrow { font-family: var(--serif); font-size: 22px; color: var(--ink-faint); transition: transform .6s var(--ease), color .4s; }
+    .services li:hover h3 { transform: translateX(10px); color: var(--sage-deep); }
+    .services li:hover .arrow { transform: rotate(-45deg); color: var(--sage-deep); }
+    .services li:hover p, .services li.is-open p { max-height: 90px; opacity: 1; }
+
+    /* Method scene */
+    .method-head { max-width: 46rem; }
+    .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(24px, 4vw, 64px); margin-top: clamp(48px, 7vw, 96px); list-style: none; padding: 0; }
+    .steps li { border-top: 1px solid var(--ink); padding-top: 26px; }
+    .steps .num { font-family: var(--serif); font-style: italic; font-size: clamp(3rem, 5vw, 4.6rem); line-height: 1; color: var(--sage-deep); }
+    .steps h3 { margin: 18px 0 8px; font-size: 13px; font-weight: 500; letter-spacing: .22em; text-transform: uppercase; }
+    .steps p { margin: 0; color: var(--ink-soft); max-width: 22rem; }
+
+    /* ---------- The sheet that rises over the video ---------- */
+    .sheet {
+      position: relative; z-index: 20; background: var(--paper);
+      border-radius: clamp(24px, 3vw, 44px) clamp(24px, 3vw, 44px) 0 0;
+      box-shadow: 0 -30px 80px -40px rgba(29, 38, 34, .35);
+    }
+    .sheet-handle { display: block; width: 44px; height: 3px; margin: 0 auto; border-radius: 3px; background: var(--line); transform: translateY(18px); }
+    .block { padding: clamp(96px, 12vw, 170px) var(--pad); }
+    .block-inner { max-width: 1320px; margin: 0 auto; }
+
+    /* About */
+    .about { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: clamp(40px, 7vw, 120px); align-items: center; }
+    .portrait { position: relative; aspect-ratio: 4 / 5; border-radius: 22px; overflow: hidden; background: var(--bone); }
+    .portrait video { width: 100%; height: 100%; object-fit: cover; transform: scale(1.15); }
+    .portrait figcaption {
+      position: absolute; left: 18px; bottom: 18px; padding: 9px 16px; border-radius: 999px;
+      background: rgba(250, 247, 242, .82); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      font-size: 11px; letter-spacing: .22em; text-transform: uppercase;
+    }
+    .about .lead { max-width: 34rem; }
+    .creds { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 40px; margin: 48px 0 0; padding: 0; list-style: none; }
+    .creds li { border-top: 1px solid var(--line); padding-top: 16px; }
+    .creds strong { display: block; font-family: var(--serif); font-weight: 400; font-size: 1.6rem; line-height: 1.15; }
+    .creds span { font-size: 14px; color: var(--ink-soft); }
+
+    /* Testimonials */
+    .quotes-head { display: flex; justify-content: space-between; align-items: end; gap: 24px; flex-wrap: wrap; }
+    .quotes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(20px, 3vw, 44px); margin-top: clamp(48px, 6vw, 80px); }
+    .quote { margin: 0; padding: 34px 0 0; border-top: 1px solid var(--line); }
+    .quote blockquote { margin: 0; font-family: var(--serif); font-size: clamp(1.45rem, 2vw, 1.8rem); font-weight: 300; line-height: 1.3; }
+    .quote blockquote::before { content: "“"; display: block; height: .55em; font-size: 3.2em; line-height: 1; color: var(--bronze); }
+    .quote figcaption { margin-top: 26px; font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-soft); }
+
+    /* Final CTA */
+    .cta { position: relative; overflow: hidden; margin: 0 var(--pad); border-radius: 28px; background: var(--ink); color: var(--paper); text-align: center; isolation: isolate; }
+    .cta video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .32; z-index: -1; filter: saturate(.6); }
+    .cta::after { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(ellipse at center, rgba(29, 38, 34, .35), rgba(29, 38, 34, .88) 75%); }
+    .cta-inner { padding: clamp(90px, 12vw, 170px) var(--pad); }
+    .cta .h2 { margin: 22px auto 0; max-width: 14ch; font-size: clamp(2.8rem, 6.6vw, 6.4rem); }
+    .cta .h2 em { color: #c9d6c6; }
+    .cta .eyebrow { color: #c9d6c6; }
+    .cta .lead { margin: 28px auto 0; color: rgba(250, 247, 242, .72); }
+    .cta .actions { justify-content: center; }
+    .cta .btn { background: var(--paper); color: var(--ink); box-shadow: none; }
+    .cta .btn::before { background: #c9d6c6; }
+    .hours { margin-top: 34px; font-size: 11.5px; letter-spacing: .24em; text-transform: uppercase; color: rgba(250, 247, 242, .5); }
+
+    /* Footer */
+    .footer { padding: 56px var(--pad) 40px; }
+    .footer-inner { max-width: 1320px; margin: 0 auto; display: grid; grid-template-columns: 1fr auto; gap: 28px; align-items: end; }
+    .footer .brand-name { font-size: clamp(2.2rem, 5vw, 4rem); }
+    .footer nav { display: flex; gap: 28px; font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-soft); }
+    .footer small { grid-column: 1 / -1; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding-top: 24px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--ink-faint); }
+
+    /* Floating WhatsApp */
+    .wa-float {
+      position: fixed; right: var(--pad); bottom: 26px; z-index: 50;
+      display: inline-flex; align-items: center; gap: 10px; padding: 13px 20px 13px 16px; border-radius: 999px;
+      background: rgba(250, 247, 242, .72); backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%);
+      border: 1px solid rgba(29, 38, 34, .1); box-shadow: 0 14px 40px -18px rgba(29, 38, 34, .45);
+      font-size: 12px; letter-spacing: .18em; text-transform: uppercase;
+      transition: transform .5s var(--ease), background .4s;
+    }
+    .wa-float:hover { transform: translateY(-3px); background: rgba(250, 247, 242, .95); }
+    .wa-float svg { width: 20px; height: 20px; color: #1f9d55; }
+    .wa-dot { width: 7px; height: 7px; border-radius: 50%; background: #25d366; box-shadow: 0 0 0 0 rgba(37, 211, 102, .6); animation: dot 2s infinite; }
+    @keyframes dot { 70% { box-shadow: 0 0 0 9px rgba(37, 211, 102, 0); } 100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); } }
+
+    /* Mobile menu */
+    .menu {
+      position: fixed; inset: 0; z-index: 35; display: flex; flex-direction: column; justify-content: center; gap: 10px;
+      padding: 0 var(--pad); background: rgba(244, 239, 231, .96); backdrop-filter: blur(12px);
+      opacity: 0; visibility: hidden; transition: opacity .5s var(--ease), visibility .5s;
+    }
+    .menu.is-open { opacity: 1; visibility: visible; }
+    .menu a { font-family: var(--serif); font-size: 2.8rem; font-weight: 300; line-height: 1.2; }
+
+    /* Reveal defaults (JS enhances; content stays visible without JS) */
+    .js [data-fade] { opacity: 0; }
+
+    @media (max-width: 900px) {
+      .nav a:not(.nav-cta) { display: none; }
+      .menu-btn { display: inline-block; }
+      .rail { display: none; }
+      .split, .about { grid-template-columns: 1fr; }
+      .split { align-items: start; }
+      .steps, .quotes { grid-template-columns: 1fr; }
+      .steps { gap: 36px; }
+      .haze {
+        background:
+          linear-gradient(180deg, rgba(244, 239, 231, .72) 0%, rgba(244, 239, 231, .58) 45%, rgba(244, 239, 231, .82) 100%);
+      }
+      .backdrop video { transform-origin: 70% 50%; }
+      .portrait { aspect-ratio: 4 / 4.2; }
+      .footer-inner { grid-template-columns: 1fr; }
+      .services p { max-height: 90px; opacity: 1; }
+    }
+    @media (max-width: 520px) {
+      body { font-size: 16px; }
+      .header { padding-top: 20px; padding-bottom: 20px; }
+      .brand-name { font-size: 21px; }
+      .nav { gap: 18px; }
+      .hide-sm { display: none; }
+      .brand-role { letter-spacing: .26em; }
+      .creds { grid-template-columns: 1fr; }
+      .wa-float .wa-label { display: none; }
+      .wa-float { padding: 14px; }
+      .btn { width: 100%; justify-content: center; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; transition: none !important; }
+      .js [data-fade] { opacity: 1; }
+    }
+  </style>
+  <script>document.documentElement.classList.add('js');</script>
+</head>
+
+<body>
+  <!-- ===== Fixed video: stays behind the first three scenes ===== -->
+  <div class="backdrop" aria-hidden="true">
+    <!-- Higgsfield · Seedance 1.5 Pro · original: https://d8j0ntlcm91z4.cloudfront.net/user_3JvRU0DniAy6e60XgkAZJBan9nY/hf_20260929_025718_eeabc6de-95f4-46c0-9cb9-470bbd3e76e7.mp4 -->
+    <video id="bgVideo" src="assets/bg-loop.mp4" poster="assets/bg-poster.jpg" autoplay loop muted playsinline preload="auto"></video>
+    <div class="haze"></div>
+    <div class="haze-full" id="hazeFull"></div>
+    <div class="grain"></div>
+  </div>
+
+  <!-- ===== Header: text on transparent ===== -->
+  <header class="header" id="header">
+    <a href="#inicio" class="brand" aria-label="Inicio">
+      <span class="brand-name">Nombre Apellido</span>
+      <span class="brand-role">Kinesiología<span class="hide-sm"> · M.P. 0000</span></span>
+    </a>
+    <nav class="nav" aria-label="Principal">
+      <a class="link-line" href="#tratamientos">Tratamientos</a>
+      <a class="link-line" href="#metodo">Método</a>
+      <a class="link-line" href="#sobre-mi">Sobre mí</a>
+      <a class="link-line nav-cta" data-wa href="#" target="_blank" rel="noopener">Consultar</a>
+      <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="menu">Menú</button>
+    </nav>
+  </header>
+
+  <div class="menu" id="menu" aria-hidden="true">
+    <a href="#tratamientos">Tratamientos</a>
+    <a href="#metodo">Método</a>
+    <a href="#sobre-mi">Sobre mí</a>
+    <a href="#testimonios">Pacientes</a>
+    <a data-wa href="#" target="_blank" rel="noopener"><em>Consultar</em></a>
+  </div>
+
+  <ul class="rail" id="rail" aria-hidden="true">
+    <li data-for="inicio"><span class="rail-label">Inicio</span></li>
+    <li data-for="tratamientos"><span class="rail-label">Tratamientos</span></li>
+    <li data-for="metodo"><span class="rail-label">Método</span></li>
+  </ul>
+
+  <main>
+    <!-- ===== Scene 01 · Hero ===== -->
+    <section class="scene" id="inicio" data-scene>
+      <div class="scene-inner" data-float>
+        <span class="eyebrow" data-intro>Kinesiología & rehabilitación</span>
+        <h1 class="display">
+          <span class="line"><span data-intro-line>Volvé a</span></span>
+          <span class="line"><span data-intro-line>moverte <em>sin</em></span></span>
+          <span class="line"><span data-intro-line><em>dolor.</em></span></span>
+        </h1>
+        <p class="lead" data-intro>Tratamientos personalizados para lesiones, dolor de espalda, post-operatorios y deporte. Contame qué te pasa y te oriento sobre el mejor camino.</p>
+        <div class="actions" data-intro>
+          <a class="btn" data-wa href="#" target="_blank" rel="noopener">
+            <span>Consultar por WhatsApp</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 12h15m-6-6 6 6-6 6"/></svg>
+          </a>
+          <a class="text-link link-line" href="#tratamientos">Ver tratamientos</a>
+        </div>
+      </div>
+      <div class="hero-meta" data-intro>
+        <span class="scroll-cue"><i></i>Scroll</span>
+      </div>
+    </section>
+
+    <!-- ===== Scene 02 · Tratamientos ===== -->
+    <section class="scene" id="tratamientos" data-scene>
+      <div class="scene-inner split" data-float>
+        <div>
+          <span class="eyebrow">Tratamientos</span>
+          <h2 class="h2">Un plan pensado para <em>tu cuerpo</em>, no uno genérico.</h2>
+          <p class="lead">Cada sesión combina evaluación, terapia manual y ejercicio guiado, con seguimiento entre turnos.</p>
+        </div>
+        <ul class="services">
+          <li><span class="n">01</span><h3>Dolor de espalda y cuello</h3><span class="arrow">→</span><p>Lumbalgia, ciática y cervicalgia, con reeducación postural para evitar recaídas.</p></li>
+          <li><span class="n">02</span><h3>Kinesiología deportiva</h3><span class="arrow">→</span><p>Prevención y recuperación de lesiones para volver a entrenar con confianza.</p></li>
+          <li><span class="n">03</span><h3>Post-operatorio</h3><span class="arrow">→</span><p>Rehabilitación después de cirugías de rodilla, hombro, cadera y columna.</p></li>
+          <li><span class="n">04</span><h3>Terapia manual</h3><span class="arrow">→</span><p>Movilizaciones y masoterapia para aliviar el dolor y recuperar movilidad.</p></li>
+          <li><span class="n">05</span><h3>Atención a domicilio</h3><span class="arrow">→</span><p>Para quienes no pueden trasladarse: el tratamiento va a tu casa.</p></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ===== Scene 03 · Método ===== -->
+    <section class="scene" id="metodo" data-scene>
+      <div class="scene-inner" data-float>
+        <div class="method-head">
+          <span class="eyebrow">Cómo funciona</span>
+          <h2 class="h2">De tu mensaje a tu primera sesión, <em>en tres pasos.</em></h2>
+        </div>
+        <ol class="steps">
+          <li><span class="num">i.</span><h3>Escribime</h3><p>Contame qué te duele, desde cuándo y si tenés estudios o indicación médica.</p></li>
+          <li><span class="num">ii.</span><h3>Te oriento</h3><p>Evalúo tu caso y te explico qué tratamiento conviene y cuántas sesiones.</p></li>
+          <li><span class="num">iii.</span><h3>Agendamos</h3><p>Coordinamos turno en consultorio o a domicilio, en el horario que te quede cómodo.</p></li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ===== The sheet rises over the video ===== -->
+    <div class="sheet" id="sheet">
+      <span class="sheet-handle"></span>
+
+      <section class="block" id="sobre-mi">
+        <div class="block-inner about">
+          <figure class="portrait" data-clip>
+            <!-- Higgsfield · Seedance 1.5 Pro · original: https://d8j0ntlcm91z4.cloudfront.net/user_3JvRU0DniAy6e60XgkAZJBan9nY/hf_20261018_023514_004164dd-23c9-4419-92b4-4aec7cdd90cd.mp4 -->
+            <video src="assets/about-loop.mp4" poster="assets/about-poster.jpg" autoplay loop muted playsinline preload="metadata"></video>
+            <figcaption>Terapia manual</figcaption>
+          </figure>
+          <div>
+            <span class="eyebrow" data-fade>Sobre mí</span>
+            <h2 class="h2" data-fade>Escucho antes de <em>tratar.</em></h2>
+            <p class="lead" data-fade>Soy Licenciada en Kinesiología y Fisiatría. Mi forma de trabajar es simple: entender tu historia, explicarte qué pasa en tu cuerpo y acompañarte con un plan claro hasta el alta.</p>
+            <!-- Replace with real credentials -->
+            <ul class="creds" data-fade>
+              <li><strong>Lic. en Kinesiología</strong><span>Universidad — completar</span></li>
+              <li><strong>M.P. 0000</strong><span>Matrícula profesional</span></li>
+              <li><strong>Consultorio</strong><span>Barrio / ciudad — completar</span></li>
+              <li><strong>Obras sociales</strong><span>Consultá por la tuya</span></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Sample testimonials: replace with real ones (with patient consent) or remove -->
+      <section class="block" id="testimonios" style="padding-top: 0">
+        <div class="block-inner">
+          <div class="quotes-head">
+            <div>
+              <span class="eyebrow" data-fade>Pacientes</span>
+              <h2 class="h2" data-fade>Lo que dicen quienes <em>volvieron a moverse.</em></h2>
+            </div>
+          </div>
+          <div class="quotes">
+            <figure class="quote" data-fade>
+              <blockquote>Llegué con una lumbalgia que no me dejaba dormir. En pocas semanas volví a trabajar sin dolor.</blockquote>
+              <figcaption>Paciente · Lumbalgia</figcaption>
+            </figure>
+            <figure class="quote" data-fade>
+              <blockquote>Después de la cirugía de rodilla pensé que no iba a volver a jugar. Hoy estoy de nuevo en la cancha.</blockquote>
+              <figcaption>Paciente · Post-operatorio</figcaption>
+            </figure>
+            <figure class="quote" data-fade>
+              <blockquote>La atención a domicilio fue clave para mi mamá. Profesional, puntual y con mucha calidez.</blockquote>
+              <figcaption>Familiar · Domicilio</figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <section class="cta" data-fade>
+        <video src="assets/hero-loop.mp4" autoplay loop muted playsinline preload="none" aria-hidden="true"></video>
+        <div class="cta-inner">
+          <span class="eyebrow">Consultas</span>
+          <h2 class="h2">¿Te duele algo? <em>Hablemos hoy.</em></h2>
+          <p class="lead">Escribime por WhatsApp con tu consulta. Te respondo y vemos juntos el mejor tratamiento.</p>
+          <div class="actions">
+            <a class="btn" data-wa href="#" target="_blank" rel="noopener">
+              <span>Escribir por WhatsApp</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 12h15m-6-6 6 6-6 6"/></svg>
+            </a>
+          </div>
+          <p class="hours">Lun a Vie 8–20 h · Sáb 9–13 h</p>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <div class="footer-inner">
+          <span class="brand-name">Nombre Apellido</span>
+          <nav aria-label="Redes">
+            <a class="link-line" data-wa href="#" target="_blank" rel="noopener">WhatsApp</a>
+            <a class="link-line" href="https://instagram.com/" target="_blank" rel="noopener">Instagram</a>
+            <a class="link-line" href="#" target="_blank" rel="noopener">Ubicación</a>
+          </nav>
+          <small>
+            <span>© <span id="year"></span> Lic. Nombre Apellido · Kinesiología · M.P. 0000</span>
+            <span>La orientación por WhatsApp no reemplaza una evaluación presencial. Ante una urgencia, acudí a una guardia.</span>
+          </small>
+        </div>
+      </footer>
+    </div>
+  </main>
+
+  <a class="wa-float" data-wa href="#" target="_blank" rel="noopener" aria-label="Consultar por WhatsApp">
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.49s1.07 2.89 1.22 3.09c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.23 1.36.2 1.87.12.57-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.12-.27-.2-.57-.35M12.05 21.5h-.01a9.4 9.4 0 0 1-4.8-1.31l-.34-.2-3.57.93.95-3.48-.22-.36A9.43 9.43 0 1 1 21.5 12.06c0 5.2-4.24 9.44-9.45 9.44m8.03-17.47A11.28 11.28 0 0 0 12.05.7C5.8.7.7 5.8.7 12.05c0 2 .52 3.95 1.52 5.67L.6 23.6l6.02-1.58a11.3 11.3 0 0 0 5.42 1.38h.01c6.26 0 11.35-5.09 11.35-11.35 0-3.03-1.18-5.88-3.32-8.02"/></svg>
+    <span class="wa-label">WhatsApp</span><span class="wa-dot"></span>
+  </a>
+
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script>
+    // ===== CONFIG: WhatsApp number (country code, no + or spaces) and default message =====
+    const WHATSAPP_NUMBER = '5490000000000';
+    const WHATSAPP_MESSAGE = 'Hola! Quisiera hacer una consulta de kinesiología.';
+
+    const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
+    document.querySelectorAll('[data-wa]').forEach((a) => (a.href = waUrl));
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Mobile menu
+    const menu = document.getElementById('menu');
+    const menuBtn = document.getElementById('menuBtn');
+    const setMenu = (open) => {
+      menu.classList.toggle('is-open', open);
+      menu.setAttribute('aria-hidden', String(!open));
+      menuBtn.setAttribute('aria-expanded', String(open));
+      menuBtn.textContent = open ? 'Cerrar' : 'Menú';
+    };
+    menuBtn.addEventListener('click', () => setMenu(!menu.classList.contains('is-open')));
+    menu.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => setMenu(false)));
+
+    // Services: reserve room for one open description so expanding a row
+    // doesn't resize the scene (which is vertically centered) and shift the left column.
+    const services = document.querySelector('.services');
+    const serviceItems = services.querySelectorAll('li');
+    const reserveServices = () => {
+      services.style.minHeight = '';
+      if (matchMedia('(max-width: 900px)').matches) return; // descriptions always open there
+      const tallest = Math.max(...[...services.querySelectorAll('p')].map((p) => p.scrollHeight + 6));
+      services.style.minHeight = `${services.offsetHeight + tallest}px`;
+    };
+    document.fonts.ready.then(reserveServices);
+    addEventListener('resize', reserveServices);
+
+    // Tap to open on touch devices, one row at a time
+    serviceItems.forEach((li) => li.addEventListener('click', () => {
+      const open = !li.classList.contains('is-open');
+      serviceItems.forEach((other) => other.classList.remove('is-open'));
+      li.classList.toggle('is-open', open);
+    }));
+
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const showAll = () => document.querySelectorAll('[data-fade]').forEach((el) => (el.style.opacity = 1));
+
+    if (!window.gsap || reduce) {
+      showAll();
+    } else {
+      gsap.registerPlugin(ScrollTrigger);
+
+      // Smooth scroll
+      let lenis;
+      if (window.Lenis) {
+        lenis = new Lenis({ duration: 1.15, smoothWheel: true });
+        lenis.on('scroll', ScrollTrigger.update);
+        gsap.ticker.add((t) => lenis.raf(t * 1000));
+        gsap.ticker.lagSmoothing(0);
+        document.querySelectorAll('a[href^="#"]').forEach((a) => a.addEventListener('click', (e) => {
+          const target = document.querySelector(a.getAttribute('href'));
+          if (target) { e.preventDefault(); lenis.scrollTo(target, { offset: 0 }); }
+        }));
+      }
+
+      // Intro
+      const intro = gsap.timeline({ defaults: { ease: 'expo.out' } });
+      intro
+        .from('#bgVideo', { scale: 1.2, duration: 2.6, ease: 'power3.out' }, 0)
+        .from('.header', { opacity: 0, y: -16, duration: 1.4, clearProps: 'transform,opacity' }, .3)
+        .from('[data-intro-line]', { yPercent: 110, duration: 1.5, stagger: .12 }, .35)
+        .from('[data-intro]', { opacity: 0, y: 24, duration: 1.3, stagger: .1 }, .8);
+
+      // Scenes: content floats in and out while the video stays fixed (desktop);
+      // on small screens scenes are taller than the viewport, so they only fade in.
+      const mm = gsap.matchMedia();
+      mm.add('(max-width: 900px)', () => {
+        gsap.utils.toArray('[data-scene]:not(#inicio) [data-float]').forEach((inner) => {
+          gsap.from(inner, { opacity: 0, y: 60, duration: 1.2, ease: 'expo.out', scrollTrigger: { trigger: inner, start: 'top 85%' } });
+        });
+      });
+      mm.add('(min-width: 901px)', () => gsap.utils.toArray('[data-scene]').forEach((scene, i) => {
+        const inner = scene.querySelector('[data-float]');
+        if (i === 0) {
+          // Hero: each element stays fully sharp while readable and only fades
+          // once it reaches the top edge (where the header sits).
+          scene.querySelectorAll('.eyebrow, .display, .lead, .actions').forEach((el) => {
+            gsap.fromTo(el, { opacity: 1, y: 0 }, {
+              opacity: 0, y: -40, ease: 'none', immediateRender: false,
+              scrollTrigger: { trigger: el, start: 'top 14%', end: 'bottom top', scrub: .6 },
+            });
+          });
+          gsap.to('.hero-meta', { opacity: 0, ease: 'none', scrollTrigger: { trigger: scene, start: 'top top', end: '15% top', scrub: true } });
+          return;
+        }
+        const tl = gsap.timeline({
+          scrollTrigger: { trigger: scene, start: 'top bottom', end: 'bottom top', scrub: .8 },
+        });
+        {
+          tl.fromTo(inner, { opacity: 0, y: 70 }, { opacity: 1, y: 0, ease: 'power2.out', duration: .25 })
+            .to(inner, { opacity: 1, duration: .5 })
+            .to(inner, { opacity: 0, y: -60, ease: 'power1.in', duration: .25 });
+        }
+      }));
+
+      gsap.utils.toArray('[data-scene]').forEach((scene) => {
+        // Rail state
+        ScrollTrigger.create({
+          trigger: scene, start: 'top center', end: 'bottom center',
+          onToggle: (self) => self.isActive && setRail(scene.id),
+        });
+      });
+
+      // Slow camera drift on the fixed video across the scenes
+      gsap.to('#bgVideo', {
+        scale: 1.16, xPercent: -3, ease: 'none',
+        scrollTrigger: { trigger: '#inicio', start: 'top top', endTrigger: '#sheet', end: 'top top', scrub: true },
+      });
+
+      // Services list items stagger in
+      gsap.from('.services li', {
+        opacity: 0, x: 40, stagger: .08, duration: 1, ease: 'expo.out',
+        scrollTrigger: { trigger: '.services', start: 'top 80%' },
+      });
+      gsap.from('.steps li', {
+        opacity: 0, y: 40, stagger: .12, duration: 1.1, ease: 'expo.out',
+        scrollTrigger: { trigger: '.steps', start: 'top 85%' },
+      });
+
+      // Sheet rising: video recedes and fades under the paper
+      gsap.timeline({ scrollTrigger: { trigger: '#sheet', start: 'top bottom', end: 'top top', scrub: true } })
+        .to('#hazeFull', { opacity: .55, ease: 'none' }, 0)
+        .to('#rail', { opacity: 0, ease: 'none', duration: .3 }, 0);
+
+      // Pause the background video once covered (saves battery)
+      const bg = document.getElementById('bgVideo');
+      ScrollTrigger.create({
+        trigger: '#sheet', start: 'top top',
+        onEnter: () => bg.pause(), onLeaveBack: () => bg.play(),
+      });
+
+      // Fade-ups inside the sheet
+      gsap.utils.toArray('[data-fade]').forEach((el) => {
+        gsap.fromTo(el, { opacity: 0, y: 50 }, {
+          opacity: 1, y: 0, duration: 1.3, ease: 'expo.out',
+          scrollTrigger: { trigger: el, start: 'top 88%' },
+        });
+      });
+
+      // Portrait clip reveal + inner parallax
+      gsap.fromTo('[data-clip]', { clipPath: 'inset(18% 12% 18% 12% round 22px)' }, {
+        clipPath: 'inset(0% 0% 0% 0% round 22px)', ease: 'none',
+        scrollTrigger: { trigger: '[data-clip]', start: 'top 95%', end: 'center 55%', scrub: true },
+      });
+      gsap.to('[data-clip] video', {
+        yPercent: -8, ease: 'none',
+        scrollTrigger: { trigger: '[data-clip]', start: 'top bottom', end: 'bottom top', scrub: true },
+      });
+
+      ScrollTrigger.create({
+        trigger: '#sheet', start: 'top 90px',
+        onToggle: (self) => document.getElementById('header').classList.toggle('on-sheet', self.isActive),
+      });
+
+      // Header hides on scroll down, returns on scroll up
+      const header = document.getElementById('header');
+      ScrollTrigger.create({
+        start: 120, end: 'max',
+        onUpdate: (self) => header.classList.toggle('is-hidden', self.direction === 1 && !menu.classList.contains('is-open')),
+        onLeaveBack: () => header.classList.remove('is-hidden'),
+      });
+    }
+
+    const railItems = document.querySelectorAll('#rail li');
+    function setRail(id) { railItems.forEach((li) => li.classList.toggle('is-active', li.dataset.for === id)); }
+    setRail('inicio');
+  </script>
+</body>
+</html>

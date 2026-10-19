@@ -1,0 +1,12 @@
+{
+  "name": "kinesio-tools",
+  "private": true,
+  "type": "module",
+  "description": "Builds assets/columna.glb from BodyParts3D (see columna-bp3d.mjs)",
+  "dependencies": {
+    "@gltf-transform/core": "4.1.1",
+    "@gltf-transform/extensions": "4.1.1",
+    "@gltf-transform/functions": "4.1.1",
+    "meshoptimizer": "0.22.0"
+  }
+}

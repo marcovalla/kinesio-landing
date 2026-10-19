@@ -215,7 +215,9 @@
       border: 1px solid var(--line);
     }
     .spine-canvas { position: absolute; inset: 0; opacity: 0; transition: opacity .8s var(--ease); }
-    .spine-stage.has-3d .spine-canvas { opacity: 1; }
+    .spine-stage.has-3d .spine-canvas { opacity: 1; cursor: grab; }
+    .spine-stage.turning .spine-canvas { cursor: grabbing; }
+    .spine-stage { -webkit-user-select: none; user-select: none; }
     /* Loader while three.js downloads and the model is built */
     .spine-loader {
       position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 18px; pointer-events: none;
@@ -261,6 +263,10 @@
     .spine-play .i-play, .spine-play[aria-pressed="true"] .i-pause { display: block; }
     .spine-play .i-pause, .spine-play[aria-pressed="true"] .i-play { display: none; }
     .spine-stage.has-3d .spine-play { display: flex; }
+    /* Progress of the current auto-cycle step, drawn along the button's outline (pill or circle) */
+    .spine-play .spine-ring { position: absolute; inset: .5px; width: calc(100% - 1px); height: calc(100% - 1px); overflow: visible; fill: none; pointer-events: none; }
+    .spine-ring rect { stroke: var(--sage-deep); stroke-width: 1.5; stroke-linecap: round; opacity: 0; transition: opacity .3s; }
+    .spine-play[aria-pressed="true"] .spine-ring rect { opacity: 1; }
     @media (min-width: 901px) and (pointer: fine) { .spine-stage.has-3d .spine-legend { max-width: calc(100% - 150px); } }
 
     .eyebrow-sm { font-size: 11px; letter-spacing: .24em; text-transform: uppercase; color: var(--ink-faint); }
@@ -309,12 +315,17 @@
       .seg-range { display: none; }
       .seg { padding: 16px 0; }
       .spine-canvas { touch-action: pan-y; }
+      .spine-stage { -webkit-touch-callout: none; }
       .spine-stage.has-3d .spine-hint, .spine-stage.has-3d .spine-pin { display: block; }
+      /* On touch layouts the badges are the handles that change each curve; a wider invisible hit area helps the finger */
+      .spine-pin { pointer-events: auto; touch-action: none; cursor: grab; }
+      .spine-pin::before { content: ""; position: absolute; inset: -10px -8px; }
       .spine-stage.has-3d .spine-pin[data-k="lat"], .spine-stage.view-coronal .spine-pin { display: none; }
       .spine-stage.has-3d.view-coronal .spine-pin[data-k="lat"] { display: block; }
       .spine-views button { padding: 7px 9px; letter-spacing: .1em; }
       .spine-tools { position: absolute; left: 14px; top: 14px; display: flex; gap: 8px; }
-      .spine-views, .spine-play { position: static; }
+      .spine-views { position: static; }
+      .spine-play { position: relative; inset: auto; }
       .spine-play { padding: 0; width: 36px; justify-content: center; }
       .spine-play [data-play-text] { display: none; }
       .spine-label { top: 60px; font-size: 1.4rem; }
@@ -567,12 +578,13 @@
                   <button type="button" data-view="posterior" aria-pressed="false">Posterior</button>
                 </div>
                 <button type="button" class="spine-play" id="spinePlay" aria-pressed="false">
+                  <svg class="spine-ring" aria-hidden="true"><rect id="spineRing" width="100%" height="100%" /></svg>
                   <svg class="i-play" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 0.5v9l8-4.5z"/></svg>
                   <svg class="i-pause" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 0.5h2.5v9H1.5zM6 0.5h2.5v9H6z"/></svg>
                   <span data-play-text>Animar</span>
                 </button>
               </div>
-              <span class="spine-hint">Tocá un tramo y deslizá hacia los lados</span>
+              <span class="spine-hint">Arrastrá una etiqueta · girá el modelo con el dedo</span>
               <span class="spine-label" id="spineLabel">Hipercifosis</span>
               <div class="spine-legend"><span><u></u>Postura ideal</span><span><i></i>Línea de plomada</span><span><b></b>Fuera de rango</span></div>
               <p class="spine-fallback">Tu navegador no puede mostrar el modelo 3D, pero podés recorrer las posturas con los botones.</p>
@@ -943,6 +955,7 @@
     };
     const CUSTOM = 'Combinación ajustada a mano. En la evaluación medimos cada curva y definimos el tratamiento según tu caso.';
     const AUTO = ['ideal', 'cifosis', 'ideal', 'lordosis', 'ideal', 'escoliosis', 'ideal', 'plana'];
+    const AUTO_STEP = 2.8; // seconds per posture in the auto-cycle
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const stage = document.getElementById('spineStage');
@@ -974,15 +987,18 @@
     playBtn.addEventListener('click', () => setAuto(!autoPlay));
 
     // Camera: side view for the sagittal curves, posterior view for scoliosis; frontal and posterior are the coronal views
-    let view = 'lateral';
+    let view = 'lateral', orbit = 0; // orbit: extra turn (radians) from dragging the model on touch layouts
     const viewBtns = [...document.querySelectorAll('.spine-views [data-view]')];
+    // A view button reads as pressed only while the model isn't turned away from it by hand
+    const markView = () => {
+      const turned = Math.abs(Math.atan2(Math.sin(orbit), Math.cos(orbit))) > 0.15;
+      viewBtns.forEach((b) => b.setAttribute('aria-pressed', String(!turned && b.dataset.view === view)));
+    };
     function setView(v) {
-      view = v;
-      viewBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
-      stage.classList.toggle('view-coronal', v !== 'lateral');
+      view = v; markView();
       if (!animating) stepModel();
     }
-    viewBtns.forEach((b) => b.addEventListener('click', () => { setAuto(false); setView(b.dataset.view); }));
+    viewBtns.forEach((b) => b.addEventListener('click', () => { setAuto(false); orbit = 0; setView(b.dataset.view); }));
     // View for a posture: the scoliosis is seen from behind, unless the frontal view is already on
     const viewFor = (v) => (isLat(v) ? (view === 'frontal' ? 'frontal' : 'posterior') : 'lateral');
 
@@ -1091,22 +1107,20 @@
       const discMat = new THREE.MeshStandardMaterial({ color: C.disc, roughness: 0.45, envMapIntensity: 0.6 });
       // Ribs translucent so they don't hide the spine
       const ribMat = new THREE.MeshStandardMaterial({ color: C.bone, roughness: 0.6, transparent: true, opacity: 0.26, depthWrite: false });
-      const pickables = [];
       // Each glTF node carries its dequantization transform: keep it on the mesh, and compute smooth normals
-      const place = (parent, name, material, region) => {
+      const place = (parent, name, material) => {
         const n = nodes[name]; n.geometry.computeVertexNormals();
         const mesh = new THREE.Mesh(n.geometry, material);
         mesh.position.copy(n.position); mesh.quaternion.copy(n.quaternion); mesh.scale.copy(n.scale);
         mesh.castShadow = mesh.receiveShadow = material !== ribMat;
         if (material === ribMat) mesh.renderOrder = 2;
-        if (region) { mesh.userData.region = region; pickables.push(mesh); }
         parent.add(mesh); return mesh;
       };
 
       // ---- Column: sacrum on the root, then one joint per vertebra from L5 up to the atlas ----
       const root = new THREE.Group(); scene.add(root);
       place(root, 'sacro', mats.sacro);
-      place(root, 'disco-sacro', discMat, 'lumbar');
+      place(root, 'disco-sacro', discMat);
       const ORDER = ['L5', 'L4', 'L3', 'L2', 'L1', 'T12', 'T11', 'T10', 'T9', 'T8', 'T7', 'T6', 'T5', 'T4', 'T3', 'T2', 'T1', 'C7', 'C6', 'C5', 'C4', 'C3', 'C2', 'C1'];
       const joints = [];
       let parent = root, y = 0;
@@ -1115,8 +1129,8 @@
         const g = new THREE.Group(); g.position.y = y; parent.add(g);
         // The bone sits in its own group so the scoliotic axial rotation doesn't carry up the chain
         const body = new THREE.Group(); g.add(body);
-        place(body, name, mats[k], k);
-        if (nodes[`disco-${name}`]) place(body, `disco-${name}`, discMat, k); // disc above this vertebra
+        place(body, name, mats[k]);
+        if (nodes[`disco-${name}`]) place(body, `disco-${name}`, discMat); // disc above this vertebra
         if (nodes[`costillas-${name}`]) place(body, `costillas-${name}`, ribMat);
         joints.push({ g, body, k });
         parent = g; y = nodes[name].userData.len;
@@ -1186,10 +1200,11 @@
       scene.add(new THREE.Line(offGeo, new THREE.LineBasicMaterial({ color: C.off })));
 
       // Three-quarter side view so the bodies and processes read in depth, or from behind (screen right = patient's right);
-      // the lights turn with the camera and the pointer adds a slight parallax
+      // the lights turn with the camera, and dragging the model turns it (orbit)
       const YAWS = { lateral: 0.38, frontal: Math.PI / 2 - 0.14, posterior: -Math.PI / 2 + 0.14 };
-      const yawOf = () => YAWS[view] + parallax;
-      let dist = 10, parallax = 0, yaw = yawOf();
+      const yawOf = () => YAWS[view] + orbit;
+      const wrapAngle = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+      let dist = 10, yaw = yawOf();
       const placeCam = () => {
         cam.position.set(Math.cos(yaw) * dist, dist * 0.06, Math.sin(yaw) * dist); cam.lookAt(0, 0, 0);
         key.position.set(Math.cos(yaw + 0.33) * 9.2, 9, Math.sin(yaw + 0.33) * 9.2);
@@ -1206,10 +1221,6 @@
       if (renderer.compileAsync) await renderer.compileAsync(scene, cam); // compile shaders without blocking
       await step(1);
       fit(); new ResizeObserver(fit).observe(mount);
-      if (!reduce && matchMedia('(hover: hover)').matches) {
-        stage.addEventListener('pointermove', (e) => { const r = stage.getBoundingClientRect(); parallax = ((e.clientX - r.left) / r.width - 0.5) * 0.5; });
-        stage.addEventListener('pointerleave', () => { parallax = 0; });
-      }
 
       // ---- Touch: drag a segment sideways to change its curve (replaces the sliders on touch layouts) ----
       const touchUI = matchMedia('(max-width: 900px), (pointer: coarse)');
@@ -1221,36 +1232,57 @@
       mid.lat = mid.dorsal;
       const pins = Object.fromEntries(KEYS.concat('lat').map((k) => { const el = document.createElement('span'); el.className = 'spine-pin'; el.dataset.k = k; el.textContent = NAMES[k]; stage.appendChild(el); return [k, el]; }));
       stage.classList.add('has-3d');
-      const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), proj = new THREE.Vector3();
+      const proj = new THREE.Vector3();
       let active = null, drag = null, releaseTimer = 0;
-      const pickRegion = (e) => {
-        const rc = mount.getBoundingClientRect();
-        ndc.set(((e.clientX - rc.left) / rc.width) * 2 - 1, -((e.clientY - rc.top) / rc.height) * 2 + 1);
-        ray.setFromCamera(ndc, cam);
-        const hit = ray.intersectObjects(pickables, false)[0];
-        return hit ? hit.object.userData.region : null;
-      };
       const setActive = (k) => { clearTimeout(releaseTimer); active = k; if (!animating) stepModel(); };
-      mount.addEventListener('pointerdown', (e) => {
+      const sign = (v) => (v < 0 ? -1 : 1);
+      // Dragging the model (finger or mouse) turns it around; on touch layouts, dragging a segment's badge changes that curve
+      // instead and leaves the model where it is
+      Object.entries(pins).forEach(([k, el]) => el.addEventListener('pointerdown', (e) => {
         if (!touchUI.matches) return;
-        let k = pickRegion(e); if (!k) return;
-        let bow = BOW[k];
-        // Coronal views: the scoliosis. From the front the patient's right is on screen left, so the drag flips
-        if (view !== 'lateral') { k = latKey(target); bow = (k === 'escC' ? -1 : 1) * (view === 'frontal' ? -1 : 1); }
-        drag = { k, bow, x0: e.clientX, v0: target[k], w: mount.clientWidth };
-        setAuto(false); setActive(view !== 'lateral' ? 'lat' : k); stage.classList.add('touched');
+        const key = k === 'lat' ? latKey(target) : k;
+        // Toward where the curve bulges, whichever way the camera faces: anterior is on screen left while cos(yaw) > 0,
+        // the patient's right on screen right while sin(yaw) < 0
+        const bow = k === 'lat' ? (key === 'escC' ? -1 : 1) * sign(-Math.sin(yaw)) : BOW[k] * sign(Math.cos(yaw));
+        drag = { type: 'curve', k, key, bow, id: e.pointerId, x0: e.clientX, v0: target[key], w: mount.clientWidth };
+        try { el.setPointerCapture(e.pointerId); } catch {}
+        setAuto(false); setActive(k); stage.classList.add('touched');
+      }));
+      mount.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        drag = { type: 'orbit', id: e.pointerId, x0: e.clientX, y0: e.clientY, o0: orbit, w: mount.clientWidth, live: false };
       });
-      mount.addEventListener('pointermove', (e) => {
-        if (!drag) return;
-        const v = Math.min(1, Math.max(0, drag.v0 + ((e.clientX - drag.x0) / drag.w) * 1.8 * drag.bow));
-        target[drag.k] = v; if (!animating) { m[drag.k] = v; stepModel(); }
+      stage.addEventListener('pointermove', (e) => {
+        if (!drag || e.pointerId !== drag.id) return;
+        if (drag.type === 'curve') {
+          const v = Math.min(1, Math.max(0, drag.v0 + ((e.clientX - drag.x0) / drag.w) * 1.8 * drag.bow));
+          target[drag.key] = v; if (!animating) { m[drag.key] = v; stepModel(); }
+          return;
+        }
+        if (!drag.live) {
+          // Only a sideways drag turns the model; a mostly vertical swipe is left to the page scroll
+          const dx = Math.abs(e.clientX - drag.x0), dy = Math.abs(e.clientY - drag.y0);
+          if (dx < 6 || dx < dy) return;
+          drag.live = true; drag.x0 = e.clientX; stage.classList.add('touched', 'turning');
+          try { mount.setPointerCapture(e.pointerId); } catch {}
+        }
+        orbit = drag.o0 + ((e.clientX - drag.x0) / drag.w) * Math.PI * 2; // one card width = a full turn
+        markView();
+        if (!animating) stepModel();
       });
-      const endDrag = () => { if (!drag) return; drag = null; releaseTimer = setTimeout(() => setActive(null), 700); };
-      ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => mount.addEventListener(ev, endDrag));
+      const endDrag = (e) => {
+        if (!drag || e.pointerId !== drag.id) return;
+        stage.classList.remove('turning');
+        if (drag.type === 'curve') releaseTimer = setTimeout(() => setActive(null), 700);
+        drag = null;
+      };
+      ['pointerup', 'pointercancel'].forEach((ev) => stage.addEventListener(ev, endDrag));
 
       const shownOff = {};
       stepModel = () => {
         if (!animating) { yaw = yawOf(); placeCam(); } // off-screen: snap the camera too
+        // Badges for what the camera actually shows: the sagittal curves from the side, the scoliosis from front or back
+        stage.classList.toggle('view-coronal', Math.abs(Math.sin(yaw)) > Math.abs(Math.cos(yaw)));
         const latBad = cobb(m) >= 10;
         pins.lat.classList.toggle('is-off', latBad);
         pins.lat.classList.toggle('is-active', active === 'lat');
@@ -1294,15 +1326,23 @@
 
       // Animate only while visible; off-screen, control changes snap and render one frame
       let visible = false, raf = 0, lastAuto = '';
+      const ring = document.getElementById('spineRing');
       const tick = () => {
         raf = visible ? requestAnimationFrame(tick) : 0;
         const t = (performance.now() - autoT0) / 1000;
         if (autoPlay) {
-          const p = PRESETS.find((q) => q.id === AUTO[Math.floor(t / 2.8) % AUTO.length]);
+          const p = PRESETS.find((q) => q.id === AUTO[Math.floor(t / AUTO_STEP) % AUTO.length]);
           if (p.id !== lastAuto) { lastAuto = p.id; Object.assign(target, p.v); setView(viewFor(p.v)); }
         } else lastAuto = '';
+        // The outline fills over each step and starts over when the posture changes (rx = half the height: pill or circle)
+        ring.setAttribute('rx', ring.ownerSVGElement.clientHeight / 2);
+        const len = ring.getTotalLength();
+        ring.style.strokeDasharray = len;
+        ring.style.strokeDashoffset = autoPlay ? len * (1 - (t / AUTO_STEP) % 1) : len;
         ALL.forEach((k) => { m[k] += (target[k] - m[k]) * (reduce ? 1 : 0.07); });
-        yaw += (yawOf() - yaw) * (reduce ? 1 : 0.06); placeCam();
+        // Shortest way round; follow the finger closely while it turns the model
+        const follow = reduce ? 1 : drag && drag.type === 'orbit' && drag.live ? 0.35 : 0.06;
+        yaw += wrapAngle(yawOf() - yaw) * follow; placeCam();
         stepModel();
       };
       new IntersectionObserver((es) => {

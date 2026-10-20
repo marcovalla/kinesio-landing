@@ -31,7 +31,7 @@ Design tokens are CSS custom properties on `:root` (`--bone`, `--paper`, `--ink*
 
 ## Spine model (`#postura`)
 
-The 3D spine in the "Postura" section uses three.js 0.160 (import map in `<head>`) and loads `assets/columna.glb` when the section nears the viewport. The bones come from BodyParts3D (CC BY 4.0, credit in the footer — keep it). `tools/columna-bp3d.mjs` builds the GLB from the OBJ files in `_raw/bp3d/` (`cd tools && npm install && node columna-bp3d.mjs`): it straightens each vertebra into its own frame, so the page applies every curve itself (`SEG` angles per joint, scoliosis via `latTilt`/`latShape`), and adds discs, ribs, the sacrum and the skull. The GLB has no normals (computed on load) and stores the mm-per-unit scale in the scene extras. The page fetches the GLB, so it only works over HTTP (never `file://`).
+The 3D spine in the "Postura" section uses three.js 0.160 (import map in `<head>`) and loads `assets/columna.glb` when the section nears the viewport. The bones come from BodyParts3D (CC BY 4.0, credit in the footer — keep it). `tools/columna-bp3d.mjs` builds the GLB from the OBJ files in `_raw/bp3d/` (`cd tools && npm install && node columna-bp3d.mjs`): it straightens each vertebra into its own frame, so the page applies every curve itself (`SEG` angles per joint, scoliosis via `latTilt`/`latShape`), and adds discs, ribs, the sacrum and the skull (its teeth come from BodyParts3D's IS-A package, the rest from the PART-OF one). The GLB has no normals (computed on load) and stores the mm-per-unit scale in the scene extras. The page fetches the GLB (`assets/columna.glb?v=N`; bump `N` after rebuilding it so browsers drop the cached copy), so it only works over HTTP (never `file://`).
 
 ## Video assets
 

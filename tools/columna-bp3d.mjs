@@ -1,7 +1,8 @@
 // Builds assets/columna.glb (spine model of the "Postura" section) from BodyParts3D OBJ files.
 //
 // Source: BodyParts3D, © The Database Center for Life Science, CC BY 4.0
-// https://dbarchive.biosciencedbc.jp/en/bodyparts3d/ — package partof_BP3D_4.0_obj_99.zip, files kept in _raw/bp3d/
+// https://dbarchive.biosciencedbc.jp/en/bodyparts3d/ — packages partof_BP3D_4.0_obj_99.zip (bones) and
+// isa_BP3D_4.0_obj_99.zip (teeth, only in that tree), files kept in _raw/bp3d/
 //
 // Every vertebra is "straightened": moved into its own frame (origin at the bottom of the vertebral body, +y along the
 // spine, +z anterior, +x patient's left) so the page can apply its own curves. Discs and ribs go in the frame of the
@@ -27,6 +28,8 @@ const DISCS = [3203, 3204, 3205, 3206, 3207, 3208, 3209, 3210, 3211, 3212, 3213,
 const RIBS = [[3228, 3334], [3229, 3336], [3230, 3338], [3231, 3340], [3232, 3342], [3233, 3344], [3234, 3346], [3235, 3347], [3236, 3348], [3225, 3330], [3226, 3331], [3227, 3332]];
 // Outer skull bones (eyes, ethmoid, vomer, conchae and palatines are hidden inside and left out)
 const SKULL = [3200, 3274, 3380, 3309, 3281, 3386, 3394, 3269, 3375, 3287, 3392, 3272, 3378, 3265, 3371, 3289];
+// The 28 permanent teeth (no wisdom teeth in BodyParts3D), same coordinates as the skull
+const TEETH = Array.from({ length: 28 }, (_, i) => 1254 + i);
 const SACRUM = 3393;
 
 const V = {
@@ -119,7 +122,8 @@ RIBS.forEach((pair, n) => {
   const c1 = verts[verts.length - 1];
   const top = Math.max(...c1.pos.map((p) => V.dot(V.sub(p, c1.frame.origin), c1.frame.up)));
   const anchor = V.add(c1.frame.origin, V.mul(c1.frame.up, top));
-  const skull = simplify(merge(SKULL.map(readObj)), 0.3);
+  // Teeth simplified on their own, so the error budget is relative to the dental arches and not the whole skull
+  const skull = merge([simplify(merge(SKULL.map(readObj)), 0.3), simplify(merge(TEETH.map(readObj)), 0.3)]);
   skull.pos = skull.pos.map((p) => V.mul(V.sub(p, anchor), 1 / MM));
   addNode('craneo', skull, { top: +(top / MM).toFixed(4) });
 }

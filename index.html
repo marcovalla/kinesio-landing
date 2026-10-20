@@ -208,7 +208,13 @@
 
     /* Postura (3D spine) */
     .posture-head { max-width: 46rem; }
-    .posture { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: clamp(32px, 5vw, 88px); margin-top: clamp(40px, 5vw, 64px); align-items: start; }
+    .posture {
+      display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); grid-template-areas: "stage pick" "stage side";
+      grid-template-rows: auto 1fr; column-gap: clamp(32px, 5vw, 88px); margin-top: clamp(40px, 5vw, 64px); align-items: start;
+    }
+    .posture > .spine-stage { grid-area: stage; }
+    .posture-pick { grid-area: pick; }
+    .posture-side { grid-area: side; }
     .spine-stage {
       position: sticky; top: 90px; height: min(640px, 78vh); border-radius: 22px; overflow: hidden;
       background: radial-gradient(ellipse at 50% 40%, var(--paper) 0%, var(--bone) 75%);
@@ -397,6 +403,9 @@
       .menu-btn { display: inline-block; }
       .rail { display: none; }
       .split, .about, .posture { grid-template-columns: 1fr; }
+      /* Mobile: pick a posture first, then the model, then the description and the sliders */
+      .posture { grid-template-areas: "pick" "stage" "side"; grid-template-rows: none; }
+      .posture-pick { margin-bottom: 22px; }
       .spine-stage { position: relative; top: 0; height: 460px; }
       .split { align-items: start; }
       .steps, .quotes { grid-template-columns: 1fr; }
@@ -590,9 +599,12 @@
               <p class="spine-fallback">Tu navegador no puede mostrar el modelo 3D, pero podés recorrer las posturas con los botones.</p>
             </div>
 
-            <div data-fade>
+            <div class="posture-pick" data-fade>
               <span class="eyebrow-sm">Posturas</span>
               <div class="presets" id="presets" role="group" aria-label="Elegí una postura"></div>
+            </div>
+
+            <div class="posture-side" data-fade>
               <div class="posture-desc" aria-live="polite">
                 <h3 id="postureTitle">Hipercifosis</h3>
                 <p id="postureText"></p>
@@ -1058,7 +1070,8 @@
 
     async function init3D() {
       // The bones download alongside three.js (needs HTTP: browsers block fetch() on file://)
-      const glb = fetch('assets/columna.glb').then((res) => { if (!res.ok) throw new Error(`columna.glb: ${res.status}`); return res.arrayBuffer(); });
+      const glb = fetch('assets/columna.glb?v=2') // bump ?v= after rebuilding the GLB so browsers don't reuse a cached copy
+        .then((res) => { if (!res.ok) throw new Error(`columna.glb: ${res.status}`); return res.arrayBuffer(); });
       await step(0.1);
       const THREE = await import('three');
       const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironment.js');

@@ -20,8 +20,8 @@ Content is template data: "Nombre Apellido", "M.P. 0000", the Instagram/Ubicaci�
 
 Two visual layers that the scroll animation choreographs:
 
-1. **Fixed video backdrop** (`.backdrop` → `#bgVideo`, `.haze`, `#hazeFull`, `.grain`) sits behind the first three `section.scene[data-scene]` elements (`#inicio`, `#tratamientos`, `#metodo`). On desktop (>900px) each scene's `[data-float]` content fades/floats in and out with scrubbed timelines while the video stays put and slowly "drifts" (scale/xPercent). The right-side `#rail` tracks the active scene via `li[data-for=<scene id>]` — a new scene needs a matching rail item.
-2. **`#sheet`** — a paper-colored panel that scrolls up over the video, containing `#sobre-mi`, `#testimonios`, the CTA section and the footer. When it covers the viewport the background video is paused, the rail fades, and the header gets `.on-sheet`.
+1. **Fixed video backdrop** (`.backdrop` → `#bgVideo`, `.haze`, `#hazeFull`, `.grain`) sits behind the first three `section.scene[data-scene]` elements (`#inicio`, `#tratamientos`, `#metodo`). On desktop (>900px) each scene's `[data-float]` content fades/floats in and out with scrubbed timelines while the video stays put and slowly "drifts" (scale/xPercent).
+2. **`#sheet`** — a paper-colored panel that scrolls up over the video, containing `#sobre-mi`, `#testimonios`, the CTA section and the footer. When it covers the viewport the background video is paused and the header gets `.on-sheet`.
 
 Animation hooks are data attributes, not classes: `data-intro` / `data-intro-line` (load intro in hero), `data-scene` + `data-float` (scene float), `data-fade` (fade-up inside the sheet), `data-clip` (portrait clip-path reveal). Breakpoint logic uses `gsap.matchMedia` at 900px; on mobile scenes only fade in since they're taller than the viewport.
 

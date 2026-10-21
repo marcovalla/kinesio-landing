@@ -92,19 +92,6 @@
     .nav-cta { color: var(--ink); }
     .menu-btn { display: none; background: none; border: 0; padding: 8px 0; color: inherit; font: inherit; font-size: 12.5px; letter-spacing: .2em; text-transform: uppercase; cursor: pointer; }
 
-    /* ---------- Scene rail (progress over the video) ---------- */
-    .rail {
-      position: fixed; right: var(--pad); top: 50%; z-index: 30; transform: translateY(-50%);
-      display: flex; flex-direction: column; gap: 18px; list-style: none; margin: 0; padding: 0;
-      font-size: 11px; letter-spacing: .24em; text-transform: uppercase; color: var(--ink-faint);
-    }
-    .rail li { display: flex; align-items: center; justify-content: flex-end; gap: 12px; transition: color .5s; }
-    .rail li::after { content: ""; width: 18px; height: 1px; background: currentColor; transition: width .6s var(--ease); }
-    .rail li.is-active { color: var(--ink); }
-    .rail li.is-active::after { width: 44px; }
-    .rail .rail-label { opacity: 0; transform: translateX(8px); transition: opacity .5s, transform .5s var(--ease); }
-    .rail li.is-active .rail-label { opacity: 1; transform: none; }
-
     /* ---------- Scenes floating over the video ---------- */
     main { position: relative; z-index: 10; }
     .scene {
@@ -112,7 +99,6 @@
       display: flex; align-items: center; padding: 120px var(--pad);
     }
     .scene-inner { width: 100%; max-width: 1320px; margin: 0 auto; }
-    @media (min-width: 901px) { .scene { padding-right: calc(var(--pad) + 150px); } }
 
     .eyebrow { display: inline-flex; align-items: center; gap: 14px; font-size: 11.5px; letter-spacing: .32em; text-transform: uppercase; color: var(--sage-deep); }
     .eyebrow::before { content: ""; width: 36px; height: 1px; background: currentColor; }
@@ -155,6 +141,18 @@
     .scroll-cue i { position: relative; display: block; width: 1px; height: 46px; background: var(--line); overflow: hidden; }
     .scroll-cue i::after { content: ""; position: absolute; left: 0; top: -40%; width: 1px; height: 40%; background: var(--ink); animation: cue 2.4s var(--ease) infinite; }
     @keyframes cue { to { top: 100%; } }
+
+    /* Frosted panel so scene text stays legible over the video */
+    .glass {
+      padding: clamp(28px, 4.5vw, 72px); border-radius: clamp(20px, 2.4vw, 34px);
+      background: rgba(250, 247, 242, .3);
+      backdrop-filter: blur(18px) saturate(1.2); -webkit-backdrop-filter: blur(18px) saturate(1.2);
+      border: 1px solid rgba(255, 255, 255, .35);
+      box-shadow: 0 30px 80px -40px rgba(29, 38, 34, .35), inset 0 1px 0 rgba(255, 255, 255, .6);
+    }
+    @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+      .glass { background: rgba(250, 247, 242, .88); }
+    }
 
     /* Services scene */
     .split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: clamp(32px, 6vw, 110px); align-items: start; }
@@ -401,7 +399,6 @@
     @media (max-width: 900px) {
       .nav a:not(.nav-cta) { display: none; }
       .menu-btn { display: inline-block; }
-      .rail { display: none; }
       .split, .about, .posture { grid-template-columns: 1fr; }
       /* Mobile: pick a posture first, then the model, then the description and the sliders */
       .posture { grid-template-areas: "pick" "stage" "side"; grid-template-rows: none; }
@@ -474,12 +471,6 @@
     <a data-wa href="#" target="_blank" rel="noopener"><em>Consultar</em></a>
   </div>
 
-  <ul class="rail" id="rail" aria-hidden="true">
-    <li data-for="inicio"><span class="rail-label">Inicio</span></li>
-    <li data-for="tratamientos"><span class="rail-label">Tratamientos</span></li>
-    <li data-for="metodo"><span class="rail-label">Método</span></li>
-  </ul>
-
   <main>
     <!-- ===== Scene 01 · Hero ===== -->
     <section class="scene" id="inicio" data-scene>
@@ -506,7 +497,7 @@
 
     <!-- ===== Scene 02 · Tratamientos ===== -->
     <section class="scene" id="tratamientos" data-scene>
-      <div class="scene-inner split" data-float>
+      <div class="scene-inner split glass" data-float>
         <div>
           <span class="eyebrow">Tratamientos</span>
           <h2 class="h2">Un plan pensado para <em>tu cuerpo</em>, no uno genérico.</h2>
@@ -524,7 +515,7 @@
 
     <!-- ===== Scene 03 · Método ===== -->
     <section class="scene" id="metodo" data-scene>
-      <div class="scene-inner" data-float>
+      <div class="scene-inner glass" data-float>
         <div class="method-head">
           <span class="eyebrow">Cómo funciona</span>
           <h2 class="h2">De tu mensaje a tu primera sesión, <em>en tres pasos.</em></h2>
@@ -842,14 +833,6 @@
         }
       }));
 
-      gsap.utils.toArray('[data-scene]').forEach((scene) => {
-        // Rail state
-        ScrollTrigger.create({
-          trigger: scene, start: 'top center', end: 'bottom center',
-          onToggle: (self) => self.isActive && setRail(scene.id),
-        });
-      });
-
       // Slow camera drift on the fixed video across the scenes
       gsap.to('#bgVideo', {
         scale: 1.16, xPercent: -3, ease: 'none',
@@ -868,8 +851,7 @@
 
       // Sheet rising: video recedes and fades under the paper
       gsap.timeline({ scrollTrigger: { trigger: '#sheet', start: 'top bottom', end: 'top top', scrub: true } })
-        .to('#hazeFull', { opacity: .55, ease: 'none' }, 0)
-        .to('#rail', { opacity: 0, ease: 'none', duration: .3 }, 0);
+        .to('#hazeFull', { opacity: .55, ease: 'none' }, 0);
 
       // Pause the background video once covered (saves battery)
       const bg = document.getElementById('bgVideo');
@@ -909,10 +891,6 @@
         onLeaveBack: () => header.classList.remove('is-hidden'),
       });
     }
-
-    const railItems = document.querySelectorAll('#rail li');
-    function setRail(id) { railItems.forEach((li) => li.classList.toggle('is-active', li.dataset.for === id)); }
-    setRail('inicio');
   </script>
 
   <!-- Postura: spine model + controls. Data and geometry ported from asset-columna/Columna Postural.dc.html -->
